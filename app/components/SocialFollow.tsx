@@ -13,8 +13,8 @@ export default function SocialFollow() {
       className="text-center"
     >
       <motion.div 
-        whileHover={{ rotate: [0, -2, 2, -2, 0] }}
-        transition={{ duration: 0.5 }}
+        whileHover={{ scale: 1.02, y: -5 }}
+        transition={{ type: "spring", stiffness: 400, damping: 10 }}
         className="glass-card rounded-3xl p-8 max-w-2xl mx-auto"
       >
         <h3 className="text-3xl font-bold text-pink-600 mb-6">
