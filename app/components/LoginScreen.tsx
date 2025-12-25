@@ -17,41 +17,30 @@ export default function LoginScreen() {
 
   // Configure a smart Date mask with hooks
   const { ref, maskRef } = useIMask({
-    mask: Date,
-    pattern: 'd-m-Y',
+    mask: 'DD-MM-YYYY',
     blocks: {
-      d: {
+      DD: {
         mask: IMask.MaskedRange,
         from: 1,
         to: 31,
         maxLength: 2,
       },
-      m: {
+      MM: {
         mask: IMask.MaskedRange,
         from: 1,
         to: 12,
         maxLength: 2,
       },
-      Y: {
+      YYYY: {
         mask: IMask.MaskedRange,
         from: 1900,
         to: 2099,
         maxLength: 4,
       }
     },
-    format: (date: Date) => {
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
-    },
-    parse: (str: string) => {
-      const [d, m, y] = str.split('-').map(Number);
-      return new Date(y, m - 1, d);
-    },
     lazy: false,
-    autofix: true,
     overwrite: true,
+    autofix: false, // Prevents cursor jumps and automatic changes during backspace
   } as any, 
   {
     onAccept: (value: string) => {
@@ -91,7 +80,7 @@ export default function LoginScreen() {
     <AnimatePresence>
       {!isSuccess && (
         <motion.div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
         >
@@ -125,8 +114,8 @@ export default function LoginScreen() {
                 
                 <div className="relative">
                   <motion.div
-                    animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
-                    transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                    animate={error ? { x: [-10, 10, -10, 10, 0] } : { x: 0 }}
+                    transition={{ duration: 0.4 }}
                   >
                     <Input 
                       ref={ref as any}
@@ -160,7 +149,7 @@ export default function LoginScreen() {
           key="success"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
