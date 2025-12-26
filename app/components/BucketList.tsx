@@ -5,9 +5,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "motion/react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+
+import { cn } from "@/lib/utils"
 
 // Initialize client lazily outside to avoid multiple instances, but handle configuration state
 let client: any = null;
+
+const MotionButton = motion(Button);
 
 type BucketItem = Schema["BucketItem"]["type"];
 
@@ -69,6 +90,17 @@ export default function BucketList() {
         return;
       }
       const text = newItem.trim();
+      const tempId = `temp-${Date.now()}`;
+      
+      // Optimistic update
+      const optimisticItem: BucketItem = {
+        id: tempId,
+        text,
+        completed: false,
+        createdAt: new Date().toISOString(),
+      } as BucketItem;
+      
+      setItems(prev => [optimisticItem, ...prev]);
       setNewItem('');
       setIsAdding(false);
       
@@ -80,6 +112,8 @@ export default function BucketList() {
         });
       } catch (error) {
         console.error('Failed to add item', error);
+        // Revert on error
+        setItems(prev => prev.filter(item => item.id !== tempId));
       }
     }
   };
@@ -87,6 +121,12 @@ export default function BucketList() {
   const toggleComplete = async (item: BucketItem) => {
     const bucketModel = (client.models as any)?.BucketItem;
     if (!bucketModel) return;
+
+    // Optimistic update
+    setItems(prev => prev.map(i => 
+      i.id === item.id ? { ...i, completed: !i.completed } : i
+    ));
+
     try {
       await bucketModel.update({
         id: item.id,
@@ -94,16 +134,29 @@ export default function BucketList() {
       });
     } catch (error) {
       console.error('Failed to toggle item', error);
+      // Revert on error
+      setItems(prev => prev.map(i => 
+        i.id === item.id ? { ...i, completed: item.completed } : i
+      ));
     }
   };
 
   const deleteItem = async (id: string) => {
     const bucketModel = (client.models as any)?.BucketItem;
     if (!bucketModel) return;
+
+    // Save previous state for revert
+    const previousItems = [...items];
+
+    // Optimistic update
+    setItems(prev => prev.filter(item => item.id !== id));
+
     try {
       await bucketModel.delete({ id });
     } catch (error) {
       console.error('Failed to delete item', error);
+      // Revert on error
+      setItems(previousItems);
     }
   };
 
@@ -145,22 +198,19 @@ export default function BucketList() {
       <Card className="glass-card bg-white/95 backdrop-blur-md border-none rounded-3xl p-6 md:p-8 shadow-2xl max-w-3xl mx-auto">
         <CardContent className="p-0">
           {/* Stats */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <div className="text-sm text-gray-600">
-                <span className="font-bold text-pink-600">{completedCount}</span> of{' '}
-                <span className="font-bold text-gray-800">{totalCount}</span> completed
+          <div className="mb-6 space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="text-sm font-medium flex items-center gap-2">
+                <span className="text-gray-600">Progress</span>
+                <Badge variant="secondary" className="bg-pink-100 text-pink-600 hover:bg-pink-100 border-none">
+                  {completedCount} / {totalCount}
+                </Badge>
               </div>
-              <div className="text-sm font-semibold text-pink-600">{Math.round(progress)}%</div>
+              <Badge variant="outline" className="text-pink-600 font-bold border-pink-200">
+                {Math.round(progress)}%
+              </Badge>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              />
-            </div>
+            <Progress value={progress} className="h-3 bg-gray-100" />
           </div>
 
           {/* Add New Item */}
@@ -175,45 +225,47 @@ export default function BucketList() {
                 className="mb-6 overflow-hidden"
               >
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type="text"
                     value={newItem}
                     onChange={(e) => setNewItem(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addItem()}
                     placeholder="Add a dream to achieve together..."
-                    className="flex-1 px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-400 focus:outline-none transition-colors"
+                    className="flex-1 h-12 rounded-xl border-pink-200 focus-visible:ring-pink-400"
                     autoFocus
                   />
-                  <button
+                  <Button
                     onClick={addItem}
-                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 active:scale-95 duration-200"
+                    className="h-12 px-6 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl shadow-lg hover:shadow-pink-500/30 hover:scale-[1.05] active:scale-95 transition-all border-none"
                   >
                     <i className="fas fa-plus"></i>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => {
                       setIsAdding(false);
                       setNewItem('');
                     }}
-                    className="px-4 py-3 bg-gray-200 text-gray-600 rounded-xl hover:bg-gray-300 transition-colors active:scale-95 duration-200"
+                    className="h-12 px-4 rounded-xl hover:bg-gray-200"
                   >
                     <i className="fas fa-times"></i>
-                  </button>
+                  </Button>
                 </div>
               </motion.div>
             ) : (
-              <motion.button
+              <MotionButton
+                variant="outline"
                 key="add-button"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 onClick={() => setIsAdding(true)}
-                className="w-full mb-6 py-3 border-2 border-dashed border-pink-300 rounded-xl text-pink-500 font-semibold hover:bg-pink-50 transition-colors flex items-center justify-center gap-2 active:scale-[0.99]"
+                className="w-full mb-6 h-12 border-2 border-dashed border-pink-300 rounded-xl text-pink-500 font-semibold hover:bg-pink-50 hover:border-pink-400 transition-all flex items-center justify-center gap-2 active:scale-[0.99] bg-transparent"
               >
                 <i className="fas fa-plus-circle"></i>
                 Add New Dream
-              </motion.button>
+              </MotionButton>
             )}
           </AnimatePresence>
 
@@ -259,23 +311,16 @@ export default function BucketList() {
                         : 'bg-white border-gray-200 hover:border-pink-200 hover:shadow-md'
                     }`}
                   >
-                    <button
-                      onClick={() => toggleComplete(item)}
-                      className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                    <Checkbox 
+                      checked={item.completed}
+                      onCheckedChange={() => toggleComplete(item)}
+                      className={cn(
+                        "peer h-6 w-6 shrink-0 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white",
                         item.completed
-                          ? 'bg-green-500 border-green-500'
+                          ? 'border-pink-500' // Ensure border is pink when checked
                           : 'border-gray-300 hover:border-pink-400'
-                      }`}
-                    >
-                      {item.completed && (
-                        <motion.i
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                          className="fas fa-check text-white text-xs"
-                        />
                       )}
-                    </button>
+                    />
 
                     <span
                       className={`flex-1 transition-all duration-200 ${
@@ -287,12 +332,34 @@ export default function BucketList() {
                       {item.text}
                     </span>
 
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 p-2 active:scale-95 duration-200"
-                    >
-                      <i className="fas fa-trash text-sm"></i>
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50 p-2 active:scale-95 duration-200"
+                        >
+                          <i className="fas fa-trash text-sm"></i>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this dream?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-white/60">
+                            Are you sure you want to remove "{item.text}" from our bucket list?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteItem(item.id)}
+                            className="bg-red-600 text-white hover:bg-red-700 border-none"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </motion.div>
                 ))
               )}

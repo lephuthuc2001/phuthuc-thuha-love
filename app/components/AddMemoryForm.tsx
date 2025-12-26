@@ -13,6 +13,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 const client = generateClient<Schema>();
 
@@ -138,6 +154,20 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     }
   };
 
+  const handleDelete = async () => {
+    if (!initialData) return;
+    setIsSubmitting(true);
+    try {
+      await client.models.Memory.delete({ id: initialData.id });
+      console.log('Memory deleted');
+      onOpenChange(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting memory:', error);
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-card bg-black/80 backdrop-blur-xl border-white/10 text-white sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -148,62 +178,67 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-4">
-          <div>
-            <label className="block text-white/80 text-sm mb-1 font-medium">Title</label>
-            <input 
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-white/80">Title</Label>
+            <Input 
+              id="title"
               {...register('title')}
-              className="w-full p-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400/50 transition-all"
+              className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50"
               placeholder="e.g. Dinner at..."
             />
             {errors.title && <p className="text-red-300 text-xs mt-1">{errors.title.message}</p>}
           </div>
 
-          <div>
-            <label className="block text-white/80 text-sm mb-1 font-medium">Date</label>
-            <input 
+          <div className="space-y-2">
+            <Label htmlFor="date" className="text-white/80">Date</Label>
+            <Input 
+              id="date"
               type="date" 
               {...register('date')}
-              className="w-full p-3 rounded-xl bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400/50 transition-all"
+              className="bg-white/10 text-white border-white/20 focus:ring-pink-400/50"
             />
             {errors.date && <p className="text-red-300 text-xs mt-1">{errors.date.message}</p>}
           </div>
 
-          <div>
-            <label className="block text-white/80 text-sm mb-1 font-medium">Description</label>
-            <textarea 
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-white/80">Description</Label>
+            <Textarea 
+              id="description"
               {...register('description')}
-              className="w-full p-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400/50 transition-all h-24 resize-none"
+              className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50 h-24 resize-none"
               placeholder="How did it feel...?"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-white/80 text-sm mb-1 font-medium">Cost (VND)</label>
+            <div className="space-y-2">
+              <Label htmlFor="cost" className="text-white/80">Cost (VND)</Label>
               <div className="relative">
-                <input 
+                <Input 
+                  id="cost"
                   type="number" 
                   step="1000"
                   {...register('cost', { valueAsNumber: true })}
-                  className="w-full p-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400/50 transition-all pl-8"
+                  className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50 pl-8"
                   placeholder="0"
                 />
-                <span className="absolute left-3 top-3 text-white/50 text-xs">₫</span>
+                <span className="absolute left-3 top-2.5 text-white/50 text-xs">₫</span>
               </div>
             </div>
-            <div>
-              <label className="block text-white/80 text-sm mb-1 font-medium">Location(s)</label>
-              <input 
+            <div className="space-y-2">
+              <Label htmlFor="location" className="text-white/80">Location(s)</Label>
+              <Input 
+                id="location"
                 {...register('location')}
-                className="w-full p-3 rounded-xl bg-white/10 text-white placeholder-white/30 border border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-400/50 transition-all"
+                className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50"
                 placeholder="Place A, Place B..."
               />
-              <p className="text-[10px] text-white/40 mt-1">Separate multiple places with commas</p>
+              <p className="text-[10px] text-white/40">Separate multiple places with commas</p>
             </div>
           </div>
 
-          <div>
-            <label className="block text-white/80 text-sm mb-2 font-medium">Photos</label>
+          <div className="space-y-2">
+            <Label className="text-white/80">Photos</Label>
             
             {/* Recent/Existing Files Grid */}
             {(existingImages.length > 0 || filePreviews.length > 0) && (
@@ -261,25 +296,57 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
             </label>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button 
+          <div className="flex gap-3 pt-4 border-t border-white/10 mt-6">
+            {initialData && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    type="button" 
+                    variant="destructive"
+                    className="h-12 w-12 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border-none"
+                    title="Delete Memory"
+                  >
+                    <i className="fas fa-trash"></i>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-white/60">
+                      This action cannot be undone. This will permanently delete your memory and remove the data from our servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDelete}
+                      className="bg-red-600 text-white hover:bg-red-700 border-none"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <Button 
               type="button" 
+              variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1 py-3 px-4 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-colors font-medium"
+              className="flex-1 h-12 rounded-xl bg-white/5 text-white hover:bg-white/10 border-white/10"
             >
               Cancel
-            </button>
-            <button 
+            </Button>
+            <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-lg hover:shadow-pink-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 h-12 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-lg hover:shadow-pink-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed border-none"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center">
                   <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
                 </span>
               ) : 'Save Memory'}
-            </button>
+            </Button>
           </div>
         </form>
       </DialogContent>

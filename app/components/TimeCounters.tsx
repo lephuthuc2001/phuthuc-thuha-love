@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "motion/react";
+import { Badge } from "@/components/ui/badge";
 
 interface TimeCountersProps {
   startDate: Date;
@@ -36,26 +37,26 @@ export default function TimeCounters({ startDate }: TimeCountersProps) {
       transition={{ duration: 4, ease: "easeInOut", repeat: Infinity }}
       className="text-center"
     >
-      <Card className="glass-card bg-transparent border-none rounded-[40px] p-8 md:p-12 inline-block max-w-3xl w-full">
+      <Card className="glass-card bg-white/40 backdrop-blur-md border border-white/20 rounded-[40px] p-8 md:p-12 inline-block max-w-3xl w-full">
         <CardContent className="p-0">
-          <h2 className="text-3xl md:text-4xl mb-8 text-pink-600">We&apos;ve been together for</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-8 text-pink-600">We&apos;ve been together for</h2>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-8">
             <div className="flex flex-col items-center">
               <span className="text-5xl md:text-7xl font-bold text-pink-500 drop-shadow-sm">{time.days}</span>
-              <span className="text-sm md:text-lg uppercase tracking-widest mt-2 text-gray-700 font-semibold">Days</span>
+              <Badge variant="secondary" className="mt-2 text-xs md:text-sm uppercase bg-pink-100 text-pink-700 hover:bg-pink-100 border-none px-3">Days</Badge>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-5xl md:text-7xl font-bold text-pink-400 drop-shadow-sm">{time.hours}</span>
-              <span className="text-sm md:text-lg uppercase tracking-widest mt-2 text-gray-700 font-semibold">Hours</span>
+              <Badge variant="secondary" className="mt-2 text-xs md:text-sm uppercase bg-pink-100 text-pink-700 hover:bg-pink-100 border-none px-3">Hours</Badge>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-5xl md:text-7xl font-bold text-pink-400 drop-shadow-sm">{time.minutes}</span>
-              <span className="text-sm md:text-lg uppercase tracking-widest mt-2 text-gray-700 font-semibold">Mins</span>
+              <Badge variant="secondary" className="mt-2 text-xs md:text-sm uppercase bg-pink-100 text-pink-700 hover:bg-pink-100 border-none px-3">Mins</Badge>
             </div>
             <div className="flex flex-col items-center">
               <span className="text-5xl md:text-7xl font-bold text-pink-400 drop-shadow-sm">{time.seconds}</span>
-              <span className="text-sm md:text-lg uppercase tracking-widest mt-2 text-gray-700 font-semibold">Secs</span>
+              <Badge variant="secondary" className="mt-2 text-xs md:text-sm uppercase bg-pink-100 text-pink-700 hover:bg-pink-100 border-none px-3">Secs</Badge>
             </div>
           </div>
           

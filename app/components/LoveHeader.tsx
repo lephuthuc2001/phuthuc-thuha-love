@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { getUrl } from 'aws-amplify/storage';
 import { useState, useEffect } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function LoveHeader() {
   const [logoUrl, setLogoUrl] = useState<string>('');
@@ -34,13 +35,10 @@ export default function LoveHeader() {
         className="mb-4 relative group"
       >
         <div className="absolute inset-0 bg-pink-400 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-        {logoUrl && (
-          <img 
-            src={logoUrl}
-            alt="Chibi Logo" 
-            className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-white shadow-xl relative z-10"
-          />
-        )}
+        <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-white shadow-xl relative z-10">
+          <AvatarImage src={logoUrl} alt="Chibi Logo" className="object-cover" />
+          <AvatarFallback className="bg-pink-100 text-pink-400">❤️</AvatarFallback>
+        </Avatar>
       </motion.div>
 
       <div className="inline-block relative">
