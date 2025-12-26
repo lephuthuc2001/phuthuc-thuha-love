@@ -171,7 +171,6 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
       setNewFiles([]);
       setFilePreviews([]);
       onOpenChange(false);
-      window.location.reload(); 
     } catch (error) {
       console.error('Error saving memory:', error);
     } finally {
@@ -186,7 +185,6 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
       await client.models.Memory.delete({ id: initialData.id });
       console.log('Memory deleted');
       onOpenChange(false);
-      window.location.reload();
     } catch (error) {
       console.error('Error deleting memory:', error);
       setIsSubmitting(false);
