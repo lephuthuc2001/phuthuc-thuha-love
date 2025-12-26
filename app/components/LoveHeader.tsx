@@ -1,8 +1,25 @@
 'use client';
 
 import { motion } from "motion/react";
+import { getUrl } from 'aws-amplify/storage';
+import { useState, useEffect } from 'react';
 
 export default function LoveHeader() {
+  const [logoUrl, setLogoUrl] = useState<string>('');
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const result = await getUrl({
+          path: 'media/img/chibi-logo.png',
+        });
+        setLogoUrl(result.url.toString());
+      } catch (error) {
+        console.error('Error loading chibi logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
   return (
     <motion.header 
       initial={{ opacity: 0, y: -50 }}
@@ -17,11 +34,13 @@ export default function LoveHeader() {
         className="mb-4 relative group"
       >
         <div className="absolute inset-0 bg-pink-400 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-        <img 
-          src="/img/chibi-logo.png" 
-          alt="Chibi Logo" 
-          className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-white shadow-xl relative z-10"
-        />
+        {logoUrl && (
+          <img 
+            src={logoUrl}
+            alt="Chibi Logo" 
+            className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-white shadow-xl relative z-10"
+          />
+        )}
       </motion.div>
 
       <div className="inline-block relative">

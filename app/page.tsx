@@ -23,7 +23,7 @@ export default function LoveStory() {
 
         const paths = listResult.items
           .map(item => item.path)
-          .filter(path => path !== 'media/img/'); // Filter out the folder itself if returned
+          .filter(path => path !== 'media/img/' && !path.endsWith('chibi-logo.png')); // Filter out folder and logo
 
         console.log('Found image paths:', paths);
 
