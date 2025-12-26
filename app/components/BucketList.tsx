@@ -3,60 +3,76 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "motion/react";
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
 
-interface BucketItem {
-  id: string;
-  text: string;
-  completed: boolean;
-  createdAt: number;
-}
+const client = generateClient<Schema>();
+
+type BucketItem = Schema["BucketItem"]["type"];
 
 export default function BucketList() {
   const [items, setItems] = useState<BucketItem[]>([]);
   const [newItem, setNewItem] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage on mount
+  // Subscribe to real-time updates
   useEffect(() => {
-    const stored = localStorage.getItem('bucketList');
-    if (stored) {
-      try {
-        setItems(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to load bucket list', e);
-      }
-    }
+    const sub = client.models.BucketItem.observeQuery().subscribe({
+      next: ({ items }) => {
+        // Sort items by createdAt descending
+        const sortedItems = [...items].sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+        setItems(sortedItems);
+        setIsLoading(false);
+      },
+      error: (error) => {
+        console.error('Error fetching bucket items:', error);
+        setIsLoading(false);
+      },
+    });
+
+    return () => sub.unsubscribe();
   }, []);
 
-  // Save to localStorage whenever items change
-  useEffect(() => {
-    if (items.length > 0 || localStorage.getItem('bucketList')) {
-      localStorage.setItem('bucketList', JSON.stringify(items));
-    }
-  }, [items]);
-
-  const addItem = () => {
+  const addItem = async () => {
     if (newItem.trim()) {
-      const item: BucketItem = {
-        id: Date.now().toString(),
-        text: newItem.trim(),
-        completed: false,
-        createdAt: Date.now(),
-      };
-      setItems([item, ...items]);
+      const text = newItem.trim();
       setNewItem('');
       setIsAdding(false);
+      
+      try {
+        await client.models.BucketItem.create({
+          text,
+          completed: false,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('Failed to add item', error);
+      }
     }
   };
 
-  const toggleComplete = (id: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
+  const toggleComplete = async (item: BucketItem) => {
+    try {
+      await client.models.BucketItem.update({
+        id: item.id,
+        completed: !item.completed,
+      });
+    } catch (error) {
+      console.error('Failed to toggle item', error);
+    }
   };
 
-  const deleteItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+  const deleteItem = async (id: string) => {
+    try {
+      await client.models.BucketItem.delete({ id });
+    } catch (error) {
+      console.error('Failed to delete item', error);
+    }
   };
 
   const completedCount = items.filter(item => item.completed).length;
@@ -172,10 +188,19 @@ export default function BucketList() {
             variants={container}
             initial="hidden"
             animate="show"
-            className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar"
+            className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar relative"
           >
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10 rounded-xl">
+                <motion.i 
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  className="fas fa-spinner text-pink-500 text-3xl"
+                />
+              </div>
+            )}
             <AnimatePresence>
-              {items.length === 0 ? (
+              {items.length === 0 && !isLoading ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -197,7 +222,7 @@ export default function BucketList() {
                     }`}
                   >
                     <button
-                      onClick={() => toggleComplete(item.id)}
+                      onClick={() => toggleComplete(item)}
                       className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                         item.completed
                           ? 'bg-green-500 border-green-500'

@@ -4,6 +4,7 @@ import "./globals.css";
 import Script from "next/script";
 import BackgroundAnimation from "@/app/components/BackgroundAnimation";
 import MusicPlayer from "@/app/components/MusicPlayer";
+import ConfigureAmplifyClientSide from "@/app/components/ConfigureAmplifyClientSide";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,6 +27,7 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
+        <ConfigureAmplifyClientSide />
         <BackgroundAnimation />
         <MusicPlayer />
         {children}
