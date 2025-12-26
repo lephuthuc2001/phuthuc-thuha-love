@@ -83,7 +83,7 @@ export default function MemoryTimeline() {
         <div className="h-1 w-24 bg-white mx-auto rounded-full opacity-50"></div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {Object.keys(groupedMemories).sort((a, b) => Number(b) - Number(a)).map(year => (
           <div key={year} className="mb-12">
             {/* Year Header */}
@@ -109,7 +109,7 @@ export default function MemoryTimeline() {
                   </div>
 
                   {/* Memory Cards */}
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {groupedMemories[year][month].map((memory) => (
                       <motion.div
                         layout
@@ -118,129 +118,124 @@ export default function MemoryTimeline() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         onClick={(e) => toggleExpand(memory.id, e)}
-                        className={`group cursor-pointer bg-white/95 backdrop-blur-md rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border-2 ${
-                          expandedId === memory.id ? 'border-pink-400 shadow-pink-500/30' : 'border-white/50'
+                        className={`group cursor-pointer bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-2 ${
+                          expandedId === memory.id ? 'border-pink-400 shadow-pink-500/20' : 'border-white/50'
                         }`}
                       >
-                        {/* Card Header with Image */}
-                        {memory.imageUrls && memory.imageUrls.length > 0 ? (
-                          <div className="relative h-48 md:h-56 overflow-hidden bg-gradient-to-br from-pink-100 to-purple-100">
-                            <img 
-                              src={memory.imageUrls[0]} 
-                              alt={memory.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                            
-                            {/* Date Badge on Image */}
-                            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-lg border border-white/50">
-                              <div className="text-center">
-                                <div className="text-3xl font-bold text-pink-600 leading-none">{new Date(memory.date).getDate()}</div>
-                                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mt-1">
-                                  {new Date(memory.date).toLocaleString('default', { month: 'short' })}
-                                </div>
+                        {/* Compact Card Layout */}
+                        <div className="flex items-center gap-4 p-4">
+                          {/* Date Badge */}
+                          <div className="flex-shrink-0 bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl px-3 py-2 border border-pink-200 shadow-sm">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-pink-600 leading-none">{new Date(memory.date).getDate()}</div>
+                              <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mt-0.5">
+                                {new Date(memory.date).toLocaleString('default', { month: 'short' })}
                               </div>
                             </div>
+                          </div>
 
-                            {/* Title on Image */}
-                            <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                              <h4 className="text-xl md:text-2xl font-bold drop-shadow-lg line-clamp-2">
-                                {memory.title}
-                              </h4>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-base md:text-lg font-bold text-gray-800 line-clamp-1 mb-1">
+                              {memory.title}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {memory.location && (
+                                <div className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2 py-1 rounded-full">
+                                  <i className="fas fa-map-marker-alt text-pink-500 text-[10px]"></i>
+                                  <span className="font-medium truncate max-w-[120px]">{memory.location}</span>
+                                </div>
+                              )}
+                              {memory.cost && memory.cost > 0 && (
+                                <div className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-full border border-green-200">
+                                  <i className="fas fa-coins text-green-600 text-[10px]"></i>
+                                  <span className="font-bold">
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(memory.cost)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        ) : (
-                          // No Image Layout
-                          <div className="relative bg-gradient-to-br from-pink-50 to-purple-50 p-6">
-                            <div className="flex items-start gap-4">
-                              <div className="bg-white rounded-2xl px-4 py-3 shadow-md border border-pink-200">
-                                <div className="text-center">
-                                  <div className="text-3xl font-bold text-pink-600 leading-none">{new Date(memory.date).getDate()}</div>
-                                  <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mt-1">
-                                    {new Date(memory.date).toLocaleString('default', { month: 'short' })}
+
+                          {/* Thumbnail - Hidden on Mobile */}
+                          {memory.imageUrls && memory.imageUrls.length > 0 && (
+                            <div className="hidden md:flex flex-shrink-0">
+                              <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 border-2 border-white shadow-md">
+                                <img 
+                                  src={memory.imageUrls[0]} 
+                                  alt={memory.title}
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                                {memory.imageUrls.length > 1 && (
+                                  <div className="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                    +{memory.imageUrls.length - 1}
                                   </div>
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="text-xl md:text-2xl font-bold text-gray-800 line-clamp-2">
-                                  {memory.title}
-                                </h4>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Card Content */}
-                        <div className="p-5 bg-white">
-                          {/* Metadata */}
-                          <div className="flex flex-wrap items-center gap-3 text-sm">
-                            {memory.location && (
-                              <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
-                                <i className="fas fa-map-marker-alt text-pink-500"></i>
-                                <span className="font-medium">{memory.location}</span>
-                              </div>
-                            )}
-                            {memory.cost && memory.cost > 0 && (
-                              <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
-                                <i className="fas fa-coins text-green-600"></i>
-                                <span className="font-bold">
-                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(memory.cost)}
-                                </span>
-                              </div>
-                            )}
-                            <button className="ml-auto text-pink-500 hover:text-pink-600 transition-colors">
+                          {/* Expand Icon */}
+                          <div className="flex-shrink-0">
+                            <div className="text-pink-500 hover:text-pink-600 transition-colors">
                               <i className={`fas ${expandedId === memory.id ? 'fa-chevron-up' : 'fa-chevron-down'} text-lg`}></i>
-                            </button>
+                            </div>
                           </div>
-
-                          {/* Expanded Content */}
-                          <AnimatePresence>
-                            {expandedId === memory.id && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: "auto" }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="pt-5 space-y-4 border-t border-gray-100 mt-4">
-                                  {memory.description && (
-                                    <div className="bg-gradient-to-br from-pink-50 to-purple-50 p-4 rounded-2xl border border-pink-100">
-                                      <p className="text-gray-700 text-sm md:text-base leading-relaxed whitespace-pre-wrap italic">
-                                        "{memory.description}"
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Image Gallery */}
-                                  {memory.imageUrls && memory.imageUrls.length > 1 && (
-                                    <div>
-                                      <h5 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Gallery</h5>
-                                      <div className="grid grid-cols-3 gap-2">
-                                        {memory.imageUrls.slice(1).map((url, i) => (
-                                          <div key={i} className="aspect-square rounded-xl overflow-hidden border-2 border-white shadow-md hover:shadow-lg transition-shadow">
-                                            <img src={url} alt={`${memory.title} ${i + 2}`} className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Edit Button */}
-                                  <div className="flex justify-end pt-2">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setEditingMemory(memory); }}
-                                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-sm"
-                                    >
-                                      <i className="fas fa-edit"></i>
-                                      <span>Edit Memory</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
+
+                        {/* Expanded Content */}
+                        <AnimatePresence>
+                          {expandedId === memory.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="overflow-hidden border-t border-gray-100"
+                            >
+                              <div className="p-4 space-y-4 bg-gradient-to-br from-gray-50/50 to-white">
+                                {memory.description && (
+                                  <div className="bg-gradient-to-br from-pink-50 to-purple-50 p-4 rounded-xl border border-pink-100">
+                                    <p className="text-gray-700 text-sm md:text-base leading-relaxed whitespace-pre-wrap italic">
+                                      "{memory.description}"
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Image Gallery */}
+                                {memory.imageUrls && memory.imageUrls.length > 0 && (
+                                  <div>
+                                    <h5 className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                                      {memory.imageUrls.length === 1 ? 'Photo' : `Photos (${memory.imageUrls.length})`}
+                                    </h5>
+                                    <div className="grid grid-cols-3 gap-2">
+                                      {memory.imageUrls.map((url, i) => (
+                                        <div key={i} className="aspect-square rounded-lg overflow-hidden border-2 border-white shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                                          <img 
+                                            src={url} 
+                                            alt={`${memory.title} ${i + 1}`} 
+                                            className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" 
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Edit Button */}
+                                <div className="flex justify-end pt-2">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setEditingMemory(memory); }}
+                                    className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white rounded-full shadow-md hover:shadow-lg transition-all duration-200 font-medium text-sm"
+                                  >
+                                    <i className="fas fa-edit"></i>
+                                    <span>Edit Memory</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </motion.div>
                     ))}
                   </div>
@@ -251,13 +246,16 @@ export default function MemoryTimeline() {
         ))}
 
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white/80 rounded-3xl overflow-hidden">
-                <Skeleton className="h-48 w-full bg-gray-200" />
-                <div className="p-5 space-y-3">
-                  <Skeleton className="h-6 w-3/4 bg-gray-200" />
-                  <Skeleton className="h-4 w-1/2 bg-gray-200" />
+              <div key={i} className="bg-white/80 rounded-2xl p-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="w-16 h-16 rounded-xl bg-gray-200" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-3/4 bg-gray-200" />
+                    <Skeleton className="h-4 w-1/2 bg-gray-200" />
+                  </div>
+                  <Skeleton className="w-16 h-16 rounded-xl bg-gray-200" />
                 </div>
               </div>
             ))}
