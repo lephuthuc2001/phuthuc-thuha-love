@@ -6,6 +6,7 @@ import { getUrl } from 'aws-amplify/storage';
 import { type Schema } from '@/amplify/data/resource';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import AddMemoryForm from './AddMemoryForm';
 
 const client = generateClient<Schema>();
@@ -14,6 +15,7 @@ type MemoryWithUrls = Schema['Memory']['type'] & { imageUrls?: string[] };
 
 export default function MemoryTimeline() {
   const [memories, setMemories] = useState<MemoryWithUrls[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingMemory, setEditingMemory] = useState<MemoryWithUrls | null>(null);
 
   useEffect(() => {
@@ -43,7 +45,12 @@ export default function MemoryTimeline() {
         );
 
         setMemories(itemsWithUrls);
+        setIsLoading(false);
       },
+      error: (error) => {
+        console.error("Error observing memories:", error);
+        setIsLoading(false);
+      }
     });
 
     return () => sub.unsubscribe();
@@ -209,11 +216,31 @@ export default function MemoryTimeline() {
             </div>
           </div>
         ))}
-        {memories.length === 0 && (
+        {isLoading ? (
+          <div className="space-y-8">
+            {[1, 2].map((i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="h-16 w-32 bg-white/10" />
+                <div className="space-y-4 pl-4 border-l-2 border-white/10">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="flex items-center gap-4 p-4 glass-card bg-black/40 rounded-2xl">
+                      <Skeleton className="w-14 h-14 rounded-2xl bg-white/10" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-6 w-1/2 bg-white/10" />
+                        <Skeleton className="h-4 w-1/4 bg-white/10" />
+                      </div>
+                      <Skeleton className="w-14 h-14 rounded-xl bg-white/10" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : memories.length === 0 ? (
           <div className="text-center text-white/50 py-12 italic">
             Ready to start your journey? Add your first memory!
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Edit Memory Modal */}

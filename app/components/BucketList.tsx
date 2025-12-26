@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import { cn } from "@/lib/utils"
 
@@ -280,12 +281,14 @@ export default function BucketList() {
             className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar relative"
           >
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10 rounded-xl backdrop-blur-sm">
-                <motion.i 
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                  className="fas fa-spinner text-pink-500 text-3xl"
-                />
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 border-gray-100 bg-white shadow-sm">
+                    <Skeleton className="h-6 w-6 rounded-full bg-gray-100" />
+                    <Skeleton className="h-5 flex-1 bg-gray-100" />
+                    <Skeleton className="h-8 w-8 rounded-md bg-gray-100" />
+                  </div>
+                ))}
               </div>
             )}
             <AnimatePresence initial={false} mode='popLayout'>
