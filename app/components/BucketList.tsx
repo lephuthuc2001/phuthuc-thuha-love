@@ -116,15 +116,15 @@ export default function BucketList() {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
+        staggerChildren: 0.05
       }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: -10 },
+    hidden: { opacity: 0, y: 10 },
     show: { opacity: 1, y: 0 },
-    exit: { opacity: 0, x: -100, transition: { duration: 0.2 } }
+    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } }
   };
 
   return (
@@ -158,7 +158,7 @@ export default function BucketList() {
                 className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
               />
             </div>
           </div>
@@ -171,7 +171,8 @@ export default function BucketList() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mb-6"
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="mb-6 overflow-hidden"
               >
                 <div className="flex gap-2">
                   <input
@@ -185,7 +186,7 @@ export default function BucketList() {
                   />
                   <button
                     onClick={addItem}
-                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105"
+                    className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 active:scale-95 duration-200"
                   >
                     <i className="fas fa-plus"></i>
                   </button>
@@ -194,7 +195,7 @@ export default function BucketList() {
                       setIsAdding(false);
                       setNewItem('');
                     }}
-                    className="px-4 py-3 bg-gray-200 text-gray-600 rounded-xl hover:bg-gray-300 transition-colors"
+                    className="px-4 py-3 bg-gray-200 text-gray-600 rounded-xl hover:bg-gray-300 transition-colors active:scale-95 duration-200"
                   >
                     <i className="fas fa-times"></i>
                   </button>
@@ -206,8 +207,9 @@ export default function BucketList() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
                 onClick={() => setIsAdding(true)}
-                className="w-full mb-6 py-3 border-2 border-dashed border-pink-300 rounded-xl text-pink-500 font-semibold hover:bg-pink-50 transition-colors flex items-center justify-center gap-2"
+                className="w-full mb-6 py-3 border-2 border-dashed border-pink-300 rounded-xl text-pink-500 font-semibold hover:bg-pink-50 transition-colors flex items-center justify-center gap-2 active:scale-[0.99]"
               >
                 <i className="fas fa-plus-circle"></i>
                 Add New Dream
@@ -223,7 +225,7 @@ export default function BucketList() {
             className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar relative"
           >
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10 rounded-xl">
+              <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10 rounded-xl backdrop-blur-sm">
                 <motion.i 
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
@@ -231,7 +233,7 @@ export default function BucketList() {
                 />
               </div>
             )}
-            <AnimatePresence>
+            <AnimatePresence initial={false} mode='popLayout'>
               {items.length === 0 && !isLoading ? (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -244,10 +246,14 @@ export default function BucketList() {
               ) : (
                 items.map((item) => (
                   <motion.div
+                    layout
                     key={item.id}
                     variants={itemVariants}
-                    layout
-                    className={`group flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                    initial="hidden"
+                    animate="show"
+                    exit="exit"
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className={`group flex items-center gap-3 p-4 rounded-xl border-2 transition-colors duration-200 ${
                       item.completed
                         ? 'bg-green-50 border-green-200'
                         : 'bg-white border-gray-200 hover:border-pink-200 hover:shadow-md'
@@ -255,7 +261,7 @@ export default function BucketList() {
                   >
                     <button
                       onClick={() => toggleComplete(item)}
-                      className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                      className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                         item.completed
                           ? 'bg-green-500 border-green-500'
                           : 'border-gray-300 hover:border-pink-400'
@@ -265,13 +271,14 @@ export default function BucketList() {
                         <motion.i
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 10 }}
                           className="fas fa-check text-white text-xs"
                         />
                       )}
                     </button>
 
                     <span
-                      className={`flex-1 transition-all ${
+                      className={`flex-1 transition-all duration-200 ${
                         item.completed
                           ? 'line-through text-gray-500'
                           : 'text-gray-800 font-medium'
@@ -282,7 +289,7 @@ export default function BucketList() {
 
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 p-2"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 p-2 active:scale-95 duration-200"
                     >
                       <i className="fas fa-trash text-sm"></i>
                     </button>
