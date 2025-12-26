@@ -1,13 +1,11 @@
-import { auth } from '@/auth';
-import { logout } from '@/app/actions'; // Explicitly import logout if used, though it's not used in this snippet, the original file didn't import it in these lines.
+'use client';
+
+import { Authenticator } from '@aws-amplify/ui-react';
+import '@aws-amplify/ui-react/styles.css';
 import './love-story.css';
-import LoginScreen from '@/app/components/LoginScreen';
 import MainPage from '@/app/components/MainPage';
 
-export default async function LoveStory() {
-  const session = await auth();
-  const isLoggedIn = !!session?.user;
-
+export default function LoveStory() {
   const startDate = new Date('2025-07-01T00:00:00');
   const nextMilestoneDate = new Date('2026-01-01T00:00:00');
 
@@ -23,17 +21,34 @@ export default async function LoveStory() {
     '/img/z7008123793908_afefd62fedef050cfa34227d737776b9.jpg',
   ];
 
-  return (
-    <div className="text-white min-h-screen">
-      {!isLoggedIn && <LoginScreen />}
+  const components = {
+    Header() {
+      return (
+        <div className="text-center p-6 pb-2">
+          <h1 className="text-4xl font-bold text-[#ff9a9e] drop-shadow-sm" style={{ fontFamily: 'Dancing Script, cursive' }}>
+            Love Story
+          </h1>
+          <p className="text-gray-500 text-sm mt-2 font-light">
+            Only for Us
+          </p>
+        </div>
+      );
+    },
+  };
 
-      {isLoggedIn && (
-        <MainPage 
-          startDate={startDate}
-          nextMilestoneDate={nextMilestoneDate}
-          images={images}
-        />
-      )}
+  return (
+    <div className="text-white min-h-screen relative z-10 flex flex-col items-center justify-center p-4">
+      <Authenticator hideSignUp={true} components={components}>
+        {({ signOut, user }) => (
+          <div className="w-full h-full">
+            <MainPage 
+              startDate={startDate}
+              nextMilestoneDate={nextMilestoneDate}
+              images={images}
+            />
+          </div>
+        )}
+      </Authenticator>
     </div>
   );
 }

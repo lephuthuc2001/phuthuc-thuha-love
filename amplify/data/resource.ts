@@ -11,7 +11,7 @@ const schema = a.schema({
       completed: a.boolean().default(false),
       createdAt: a.datetime(),
     })
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [allow.authenticated()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

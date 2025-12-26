@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 
-const client = generateClient<Schema>();
+// Initialize client lazily outside to avoid multiple instances, but handle configuration state
+let client: any = null;
 
 type BucketItem = Schema["BucketItem"]["type"];
 
@@ -15,6 +16,15 @@ export default function BucketList() {
   const [newItem, setNewItem] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Lazy initialize Amplify client
+  if (!client) {
+    try {
+      client = generateClient<Schema>();
+    } catch (e) {
+      console.error("Failed to generate Amplify client:", e);
+    }
+  }
 
   // Subscribe to real-time updates
   useEffect(() => {

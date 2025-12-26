@@ -1,6 +1,6 @@
 'use client';
 
-import { logout } from '@/app/actions';
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import LoveHeader from './LoveHeader';
 import TimeCounters from './TimeCounters';
 import MemoriesGallery from './MemoriesGallery';
@@ -16,6 +16,8 @@ interface MainPageProps {
 }
 
 export default function MainPage({ startDate, nextMilestoneDate, images }: MainPageProps) {
+  const { signOut } = useAuthenticator();
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -40,7 +42,7 @@ export default function MainPage({ startDate, nextMilestoneDate, images }: MainP
           className="fas fa-heart text-red-500 inline-block mx-1"
         ></motion.i> for Thu Hà</p>
         <button 
-          onClick={() => logout()} 
+          onClick={signOut} 
           className="mt-4 text-xs text-white/50 hover:text-white transition-colors"
         >
           Logout
