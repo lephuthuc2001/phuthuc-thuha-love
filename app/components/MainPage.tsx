@@ -4,6 +4,7 @@ import { logout } from '@/app/actions';
 import LoveHeader from './LoveHeader';
 import TimeCounters from './TimeCounters';
 import MemoriesGallery from './MemoriesGallery';
+import BucketList from './BucketList';
 import Milestones from './Milestones';
 import SocialFollow from './SocialFollow';
 import { motion } from "motion/react";
@@ -27,6 +28,7 @@ export default function MainPage({ startDate, nextMilestoneDate, images }: MainP
       <main className="max-w-5xl mx-auto space-y-16">
         <TimeCounters startDate={startDate} />
         <MemoriesGallery images={images} />
+        <BucketList />
         <Milestones nextMilestoneDate={nextMilestoneDate} />
         <SocialFollow />
       </main>
