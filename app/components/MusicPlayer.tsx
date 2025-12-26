@@ -13,7 +13,7 @@ export default function MusicPlayer() {
     const fetchAudio = async () => {
       try {
         const result = await getUrl({
-          path: 'media/music/all-of-me-hook.mp3',
+          path: 'media/audio/all-of-me-hook.mp3',
         });
         setAudioSrc(result.url.toString());
       } catch (error) {
