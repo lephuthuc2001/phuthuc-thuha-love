@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-
 import { cn } from "@/lib/utils"
 
 // Initialize client lazily outside to avoid multiple instances, but handle configuration state
@@ -38,6 +37,9 @@ export default function BucketList() {
   const [newItem, setNewItem] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingItem, setEditingItem] = useState<BucketItem | null>(null);
+  const [editText, setEditText] = useState('');
+
 
   // Lazy initialize Amplify client
   if (!client) {
@@ -160,6 +162,41 @@ export default function BucketList() {
       setItems(previousItems);
     }
   };
+
+  const handleEdit = (item: BucketItem) => {
+    setEditingItem(item);
+    setEditText(item.text || '');
+  };
+
+  const saveEdit = async () => {
+    if (!editingItem || !editText.trim()) return;
+
+    const bucketModel = (client.models as any)?.BucketItem;
+    if (!bucketModel) return;
+
+    const updatedText = editText.trim();
+    const originalItem = { ...editingItem };
+
+    // Optimistic update
+    setItems(prev => prev.map(i => 
+      i.id === editingItem.id ? { ...i, text: updatedText } : i
+    ));
+    setEditingItem(null);
+
+    try {
+      await bucketModel.update({
+        id: originalItem.id,
+        text: updatedText,
+      });
+    } catch (error) {
+      console.error('Failed to update item', error);
+      // Revert on error
+      setItems(prev => prev.map(i => 
+        i.id === originalItem.id ? originalItem : i
+      ));
+    }
+  };
+
 
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
@@ -317,57 +354,107 @@ export default function BucketList() {
                         : 'bg-white border-gray-200 hover:border-pink-200 hover:shadow-md'
                     }`}
                   >
-                    <div className="pt-0.5 sm:pt-0">
-                      <Checkbox 
-                        checked={!!item.completed}
-                        onCheckedChange={() => toggleComplete(item)}
-                        className={cn(
-                          "peer h-6 w-6 shrink-0 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white",
-                          item.completed
-                            ? 'border-pink-500' // Ensure border is pink when checked
-                            : 'border-gray-300 hover:border-pink-400'
-                        )}
-                      />
-                    </div>
-
-                    <span
-                      className={`flex-1 transition-all duration-200 break-words min-w-0 ${
-                        item.completed
-                          ? 'line-through text-gray-500'
-                          : 'text-gray-800 font-medium'
-                      }`}
-                    >
-                      {item.text}
-                    </span>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50 p-2 active:scale-95 duration-200 shrink-0"
-                        >
-                          <i className="fas fa-trash text-sm"></i>
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete this dream?</AlertDialogTitle>
-                          <AlertDialogDescription className="text-white/60">
-                            Are you sure you want to remove "{item.text}" from our bucket list?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteItem(item.id)}
-                            className="bg-red-600 text-white hover:bg-red-700 border-none"
+                    {editingItem?.id === item.id ? (
+                      <div className="flex-1 flex items-center gap-2 w-full animate-in fade-in slide-in-from-left-2 duration-200">
+                        <Input
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') saveEdit();
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') setEditingItem(null);
+                          }}
+                          className="flex-1 h-10 rounded-xl border-2 border-pink-300 focus-visible:ring-pink-400 bg-white"
+                          autoFocus
+                        />
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={saveEdit}
+                            className="text-green-500 hover:bg-green-50 h-10 w-10 bg-white shadow-sm border border-green-100 rounded-xl"
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <i className="fas fa-check"></i>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingItem(null)}
+                            className="text-gray-400 hover:bg-gray-50 h-10 w-10 bg-white shadow-sm border border-gray-100 rounded-xl"
+                          >
+                            <i className="fas fa-times"></i>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="pt-0.5 sm:pt-0">
+                          <Checkbox 
+                            checked={!!item.completed}
+                            onCheckedChange={() => toggleComplete(item)}
+                            className={cn(
+                              "peer h-6 w-6 shrink-0 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white",
+                              item.completed
+                                ? 'border-pink-500' // Ensure border is pink when checked
+                                : 'border-gray-300 hover:border-pink-400'
+                            )}
+                          />
+                        </div>
+
+                        <span
+                          className={`flex-1 transition-all duration-200 break-words min-w-0 ${
+                            item.completed
+                              ? 'line-through text-gray-500'
+                              : 'text-gray-800 font-medium'
+                          }`}
+                        >
+                          {item.text}
+                        </span>
+
+                        <div className="flex gap-1 shrink-0">
+                          {!item.completed && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(item)}
+                              className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-pink-400 hover:text-pink-600 hover:bg-pink-50 p-2 active:scale-95 duration-200"
+                            >
+                              <i className="fas fa-edit text-sm"></i>
+                            </Button>
+                          )}
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50 p-2 active:scale-95 duration-200 shrink-0"
+                              >
+                                <i className="fas fa-trash text-sm"></i>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this dream?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-white/60">
+                                  Are you sure you want to remove "{item.text}" from our bucket list?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteItem(item.id)}
+                                  className="bg-red-600 text-white hover:bg-red-700 border-none"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </>
+                    )}
                   </motion.div>
                 ))
               )}
@@ -375,6 +462,7 @@ export default function BucketList() {
           </motion.div>
 
           {/* Footer Message */}
+
           {items.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}

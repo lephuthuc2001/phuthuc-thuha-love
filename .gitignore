@@ -41,3 +41,6 @@ amplify_outputs*
 amplifyconfiguration*
 
 aws
+
+.antigravity-server
+.agent
