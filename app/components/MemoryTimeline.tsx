@@ -136,7 +136,7 @@ export default function MemoryTimeline() {
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-base md:text-lg font-bold text-gray-800 line-clamp-1 mb-1">
+                            <h4 className="text-base md:text-lg font-bold text-gray-800 mb-1 break-words">
                               {memory.title}
                             </h4>
                             <div className="flex flex-wrap items-center gap-2 text-xs">
