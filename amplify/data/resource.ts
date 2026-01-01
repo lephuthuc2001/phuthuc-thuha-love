@@ -10,6 +10,7 @@ const schema = a.schema({
       text: a.string().required(),
       completed: a.boolean().default(false),
       createdAt: a.datetime(),
+      order: a.integer(),
     })
     .authorization((allow) => [allow.authenticated()]),
 

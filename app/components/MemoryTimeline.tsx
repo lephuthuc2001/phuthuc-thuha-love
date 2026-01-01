@@ -164,26 +164,41 @@ export default function MemoryTimeline() {
                                 }`}
                               >
                                 {/* Activity Card Content */}
-                                <div className="flex items-center gap-4 p-4">
-                                  {/* Mobile Activity Indicator */}
-                                  <div className="md:hidden flex-shrink-0 w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 font-bold text-xs border border-pink-100">
-                                    {idx + 1}
-                                  </div>
-
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="text-base md:text-lg font-bold text-gray-800 mb-1 break-words">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4">
+                                  
+                                  {/* Mobile Header: Index + Title + Arrow */}
+                                  <div className="flex items-start gap-3 sm:hidden w-full">
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-pink-500 font-bold text-xs border border-pink-100 mt-0.5">
+                                      {idx + 1}
+                                    </div>
+                                    <h4 className="flex-1 text-base font-bold text-gray-800 break-words leading-tight mt-1">
                                       {memory.title}
                                     </h4>
-                                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                                    <motion.div 
+                                      animate={{ rotate: expandedId === memory.id ? 180 : 0 }}
+                                      className="text-pink-400 mt-1"
+                                    >
+                                      <i className="fas fa-chevron-down text-lg"></i>
+                                    </motion.div>
+                                  </div>
+
+                                  {/* Desktop: Content Structure */}
+                                  <div className="flex-1 min-w-0 flex flex-col gap-2 w-full">
+                                    {/* Desktop Title */}
+                                    <h4 className="hidden sm:block text-lg font-bold text-gray-800 break-words">
+                                      {memory.title}
+                                    </h4>
+
+                                    {/* Meta Tags (Location & Cost) */}
+                                    <div className="flex flex-wrap items-center gap-2 text-xs w-full">
                                       {memory.location && (
-                                        <div className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
-                                          <i className="fas fa-map-marker-alt text-pink-500 text-[10px]"></i>
-                                          <span className="font-medium truncate max-w-[150px]">{memory.location}</span>
+                                        <div className="flex items-start gap-1.5 text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 max-w-full">
+                                          <i className="fas fa-map-marker-alt text-pink-500 text-[10px] mt-0.5 flex-shrink-0"></i>
+                                          <span className="font-medium whitespace-normal break-words text-left leading-snug">{memory.location}</span>
                                         </div>
                                       )}
                                       {memory.cost && memory.cost > 0 && (
-                                        <div className="flex items-center gap-1 text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
+                                        <div className="flex items-center gap-1 text-green-700 bg-green-50 px-2.5 py-1.5 rounded-lg border border-green-200 whitespace-nowrap">
                                           <i className="fas fa-coins text-green-600 text-[10px]"></i>
                                           <span className="font-bold">
                                             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(memory.cost)}
@@ -193,44 +208,42 @@ export default function MemoryTimeline() {
                                     </div>
                                   </div>
 
-                                  {/* Thumbnail */}
-                                  {memory.imageUrls && memory.imageUrls.length > 0 && (
-                                    <div className="flex-shrink-0">
-                                      <div 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setLightboxImage(memory.imageUrls![0]);
-                                        }}
-                                        className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 border-2 border-white shadow-md cursor-zoom-in hover:shadow-lg transition-all"
-                                      >
-                                        <img 
-                                          src={memory.imageUrls[0]} 
-                                          alt={memory.title}
-                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                        {memory.imageUrls.length > 1 && (
-                                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                            <span className="text-white font-bold text-xs">+{memory.imageUrls.length}</span>
+                                  {/* Desktop: Right Side Actions (Thumb + Arrow) */}
+                                   <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-1 sm:mt-0 pl-11 sm:pl-0">
+                                      {/* Thumbnail */}
+                                      {memory.imageUrls && memory.imageUrls.length > 0 && (
+                                        <div className="flex-shrink-0">
+                                          <div 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setLightboxImage(memory.imageUrls![0]);
+                                            }}
+                                            className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 border border-white shadow-sm cursor-zoom-in"
+                                          >
+                                            <img 
+                                              src={memory.imageUrls[0]} 
+                                              alt={memory.title}
+                                              className="w-full h-full object-cover"
+                                            />
+                                            {memory.imageUrls.length > 1 && (
+                                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                <span className="text-white font-bold text-xs">+{memory.imageUrls.length}</span>
+                                              </div>
+                                            )}
                                           </div>
-                                        )}
-                                        {memory.imageUrls.length > 1 && (
-                                          <div className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm group-hover:hidden">
-                                            +{memory.imageUrls.length - 1}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
+                                        </div>
+                                      )}
 
-                                  {/* Expand Icon */}
-                                  <div className="flex-shrink-0">
-                                    <motion.div 
-                                      animate={{ rotate: expandedId === memory.id ? 180 : 0 }}
-                                      className="text-pink-400 group-hover:text-pink-500 transition-colors"
-                                    >
-                                      <i className="fas fa-chevron-down text-lg"></i>
-                                    </motion.div>
-                                  </div>
+                                      {/* Desktop Arrow */}
+                                      <div className="hidden sm:block flex-shrink-0">
+                                        <motion.div 
+                                          animate={{ rotate: expandedId === memory.id ? 180 : 0 }}
+                                          className="text-pink-400 group-hover:text-pink-500 transition-colors"
+                                        >
+                                          <i className="fas fa-chevron-down text-lg"></i>
+                                        </motion.div>
+                                      </div>
+                                   </div>
                                 </div>
 
                                 {/* Expanded Content */}

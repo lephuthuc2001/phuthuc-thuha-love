@@ -245,7 +245,7 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="cost" className="text-white/80">Cost (VND)</Label>
               <div className="relative">
@@ -254,21 +254,21 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
                   type="text" 
                   value={displayCost}
                   onChange={handleCostChange}
-                  className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50 pl-8"
+                  className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50 pl-8 h-12"
                   placeholder="0"
                 />
-                <span className="absolute left-3 top-2.5 text-white/50 text-xs">₫</span>
+                <span className="absolute left-3 top-3.5 text-white/50 text-xs">₫</span>
               </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="location" className="text-white/80">Location(s)</Label>
+              <Label htmlFor="location" className="text-white/80">Location</Label>
               <Input 
                 id="location"
                 {...register('location')}
-                className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50"
-                placeholder="Place A, Place B..."
+                className="bg-white/10 text-white placeholder:text-white/30 border-white/20 focus:ring-pink-400/50 h-12"
+                placeholder="Where was this? (e.g. Near the big lake...)"
               />
-              <p className="text-[10px] text-white/40">Separate multiple places with commas</p>
             </div>
           </div>
 

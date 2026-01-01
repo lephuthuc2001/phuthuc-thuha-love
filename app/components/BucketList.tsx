@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, Reorder } from "motion/react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {
@@ -39,6 +39,8 @@ export default function BucketList() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<BucketItem | null>(null);
   const [editText, setEditText] = useState('');
+  const [activeItems, setActiveItems] = useState<BucketItem[]>([]);
+
 
   // Lazy initialize Amplify client
   if (!client) {
@@ -55,12 +57,28 @@ export default function BucketList() {
     queryFn: async () => {
       const { data: bucketItems } = await client.models.BucketItem.list();
       return (bucketItems || []).sort((a: BucketItem, b: BucketItem) => {
+        // Sort by order first (ascending), then by creation date (newest first)
+        if (a.order !== null && b.order !== null && a.order !== b.order) {
+           return (a.order ?? 0) - (b.order ?? 0);
+        }
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();
         return dateB - dateA;
       });
     },
   });
+
+  useEffect(() => {
+    if (items) {
+      const active = items.filter((i: BucketItem) => !i.completed);
+      // Only update if the order or content has actually changed to avoid jitter
+      setActiveItems(prev => {
+         const isSame = prev.length === active.length && prev.every((p, i) => p.id === active[i].id);
+         return isSame ? prev : active;
+      });
+    }
+  }, [items]);
+
 
   // Create Mutation
   const createMutation = useMutation({
@@ -81,7 +99,9 @@ export default function BucketList() {
         text,
         completed: false,
         createdAt: new Date().toISOString(),
+        order: previousItems ? previousItems.length : 0, 
       } as BucketItem;
+
 
       if (previousItems) {
         queryClient.setQueryData(["bucketItems"], [optimisticItem, ...previousItems]);
@@ -161,6 +181,36 @@ export default function BucketList() {
     },
   });
 
+  const handleReorder = async (newOrder: BucketItem[]) => {
+    setActiveItems(newOrder); // Optimistic local update
+    
+    // Create map of updates needed
+    const updates = newOrder.map((item, index) => {
+      if (item.order !== index) {
+        return { id: item.id, order: index };
+      }
+      return null;
+    }).filter(Boolean);
+
+    if (updates.length > 0) {
+      // We process updates in batches or sequence - for now simple Promise.all
+      // Note: In a real app, you might want to debounce this or use a more robust sync
+      try {
+        await Promise.all(updates.map(u => 
+          client.models.BucketItem.update({
+            id: u!.id,
+            order: u!.order
+          })
+        ));
+      } catch (e) {
+        console.error("Failed to persist order", e);
+        // On error, we might want to refetch
+        queryClient.invalidateQueries({ queryKey: ["bucketItems"] });
+      }
+    }
+  };
+
+
   const addItem = async () => {
     if (newItem.trim()) {
       createMutation.mutate(newItem.trim());
@@ -196,8 +246,11 @@ export default function BucketList() {
   };
 
 
-  const completedCount = items.filter((item: BucketItem) => item.completed).length;
+  
+  const completedItems = items.filter((item: BucketItem) => item.completed);
+  const completedCount = completedItems.length;
   const totalCount = items.length;
+
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   const container = {
@@ -337,7 +390,7 @@ export default function BucketList() {
           </AnimatePresence>
 
           {/* Bucket List Items */}
-          <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar relative">
+          <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar relative space-y-8">
             {isLoading && (
               <motion.div 
                 initial={{ opacity: 0 }}
@@ -354,148 +407,76 @@ export default function BucketList() {
               </motion.div>
             )}
             
-            <div className="space-y-4">
-              <AnimatePresence initial={false} mode="popLayout">
-                {items.length === 0 && !isLoading ? (
-                  <motion.div
-                    key="empty-state"
+            {/* Active Items (Reorderable) */}
+             <div>
+               <div className="flex items-center gap-2 mb-4">
+                 <h3 className="text-lg font-bold text-gray-700">To Do</h3>
+                 <Badge variant="secondary" className="bg-pink-100 text-pink-600 border-none">{activeItems.length}</Badge>
+               </div>
+               
+               <Reorder.Group axis="y" values={activeItems} onReorder={handleReorder} className="space-y-3">
+                {activeItems.length === 0 && !isLoading ? (
+                   <motion.div
+                    key="empty-todo"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={layoutTransition}
-                    className="text-center py-16 text-gray-400"
+                    className="text-center py-8 border-2 border-dashed border-gray-100 rounded-2xl"
                   >
-                    <i className="fas fa-heart text-7xl mb-6 text-pink-100"></i>
-                    <p className="text-xl font-medium text-gray-400">Start adding your dreams for 2026!</p>
+                    <p className="text-gray-400">No active dreams. Add one above! ✨</p>
                   </motion.div>
                 ) : (
-                  items.map((item: BucketItem) => (
-                    <motion.div
-                      layout
-                      transition={layoutTransition}
-                      key={item.id}
-                      variants={itemVariants}
-                      initial="hidden"
-                      animate="show"
-                      exit="exit"
-                      className={`w-full group flex flex-col md:flex-row md:items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 ${
-                        item.completed
-                          ? 'bg-green-50/50 border-green-100 shadow-sm'
-                          : 'bg-white border-gray-100 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/5'
-                      }`}
+                  activeItems.map((item: BucketItem) => (
+                    <Reorder.Item 
+                        key={item.id} 
+                        value={item}
+                        className="touch-none" // prevent scroll interference on mobile drag
                     >
-                      {editingItem?.id === item.id ? (
-                        <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full animate-in fade-in slide-in-from-left-2 duration-300 p-1">
-                          <Input
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') saveEdit();
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Escape') setEditingItem(null);
-                            }}
-                            className="flex-1 h-12 sm:h-14 rounded-xl border-2 border-pink-200 focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 bg-white text-base px-4 transition-all"
-                            autoFocus
-                          />
-                          <div className="flex gap-2 justify-end sm:shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={saveEdit}
-                              className="flex-1 sm:flex-none text-green-500 hover:bg-green-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-green-100 rounded-xl transition-all active:scale-95"
-                            >
-                              <i className="fas fa-check"></i>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setEditingItem(null)}
-                              className="flex-1 sm:flex-none text-gray-400 hover:bg-gray-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-gray-100 rounded-xl transition-all active:scale-95"
-                            >
-                              <i className="fas fa-times"></i>
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-start gap-4 flex-1 min-w-0">
-                            <div className="pt-0.5 shrink-0 relative group/checkbox">
-                              <Checkbox 
-                                checked={!!item.completed}
-                                onCheckedChange={() => toggleComplete(item)}
-                                className={cn(
-                                  "peer h-8 w-8 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white transition-all duration-300",
-                                  item.completed
-                                    ? 'border-pink-500'
-                                    : 'border-pink-200 bg-pink-50/30 hover:border-pink-400 hover:bg-pink-100/50'
-                                )}
-                              />
-                              {!item.completed && (
-                                <i className="fas fa-heart absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-pink-200 group-hover/checkbox:text-pink-400 transition-colors pointer-events-none"></i>
-                              )}
-                            </div>
-
-                            <span
-                            className={`flex-1 break-words min-w-0 text-[15px] sm:text-lg leading-relaxed ${
-                              item.completed
-                                ? 'line-through text-gray-400 font-normal italic'
-                                : 'text-gray-700 font-semibold'
-                            }`}
-                          >
-                              {item.text}
-                            </span>
-                          </div>
-
-                          <div className="flex gap-2 shrink-0 items-center justify-end md:justify-center mt-2 md:mt-0 pt-2 md:pt-0 border-t border-gray-50 md:border-none">
-                            {!item.completed && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(item)}
-                                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-pink-400 hover:text-pink-600 hover:bg-pink-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
-                              >
-                                <i className="fas fa-edit text-sm"></i>
-                              </Button>
-                            )}
-
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-red-400 hover:text-red-600 hover:bg-red-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
-                                >
-                                  <i className="fas fa-trash text-sm"></i>
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white rounded-3xl mx-4">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-xl font-bold">Delete this dream?</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-white/60">
-                                    Are you sure you want to remove "{item.text}" from our bucket list?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter className="flex-row gap-2">
-                                  <AlertDialogCancel className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl mt-0">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteItem(item.id)}
-                                    className="flex-1 bg-red-600 text-white hover:bg-red-700 border-none rounded-xl"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </>
-                      )}
-                    </motion.div>
+                        <BucketListItem 
+                          item={item} 
+                          toggleComplete={toggleComplete} 
+                          handleEdit={handleEdit} 
+                          deleteItem={deleteItem}
+                          editingItem={editingItem}
+                          editText={editText}
+                          setEditText={setEditText}
+                          saveEdit={saveEdit}
+                          setEditingItem={setEditingItem}
+                          isDraggable={true}
+                        />
+                    </Reorder.Item>
                   ))
                 )}
-              </AnimatePresence>
+               </Reorder.Group>
             </div>
+
+            {/* Completed Items */}
+            {completedItems.length > 0 && (
+              <div className="pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-lg font-bold text-gray-400">Completed</h3>
+                  <Badge variant="secondary" className="bg-green-100 text-green-600 border-none">{completedCount}</Badge>
+                </div>
+                <div className="space-y-3 opacity-80 hover:opacity-100 transition-opacity">
+                   {completedItems.map((item: BucketItem) => (
+                     <BucketListItem 
+                        key={item.id}
+                        item={item} 
+                        toggleComplete={toggleComplete} 
+                        handleEdit={handleEdit} 
+                        deleteItem={deleteItem}
+                        editingItem={editingItem}
+                        editText={editText}
+                        setEditText={setEditText}
+                        saveEdit={saveEdit}
+                        setEditingItem={setEditingItem}
+                        isDraggable={false}
+                      />
+                   ))}
+                </div>
+              </div>
+            )}
           </div>
+
 
           {/* Footer Message */}
 
@@ -535,5 +516,127 @@ export default function BucketList() {
         }
       `}</style>
     </motion.section>
+  );
+}
+
+function BucketListItem({ item, toggleComplete, handleEdit, deleteItem, editingItem, editText, setEditText, saveEdit, setEditingItem, isDraggable }: any) {
+  return (
+    <div
+      className={`w-full group flex flex-col md:flex-row md:items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 transition-all ${
+        item.completed
+          ? 'bg-green-50/50 border-green-100 shadow-sm'
+          : 'bg-white border-gray-100 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/5'
+      } ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+    >
+      {editingItem?.id === item.id ? (
+        <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full animate-in fade-in slide-in-from-left-2 duration-300 p-1">
+          <Input
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveEdit();
+              if (e.key === 'Escape') setEditingItem(null);
+            }}
+            className="flex-1 h-12 sm:h-14 rounded-xl border-2 border-pink-200 focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 bg-white text-base px-4 transition-all"
+            autoFocus
+          />
+          <div className="flex gap-2 justify-end sm:shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={saveEdit}
+              className="flex-1 sm:flex-none text-green-500 hover:bg-green-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-green-100 rounded-xl transition-all active:scale-95"
+            >
+              <i className="fas fa-check"></i>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setEditingItem(null)}
+              className="flex-1 sm:flex-none text-gray-400 hover:bg-gray-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-gray-100 rounded-xl transition-all active:scale-95"
+            >
+              <i className="fas fa-times"></i>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+             {isDraggable && (
+                <div className="pt-2 text-gray-300 cursor-grab active:cursor-grabbing">
+                   <i className="fas fa-grip-vertical"></i>
+                </div>
+             )}
+            <div className="pt-0.5 shrink-0 relative group/checkbox">
+              <Checkbox 
+                checked={!!item.completed}
+                onCheckedChange={() => toggleComplete(item)}
+                className={cn(
+                  "peer h-8 w-8 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white transition-all duration-300",
+                  item.completed
+                    ? 'border-pink-500'
+                    : 'border-pink-200 bg-pink-50/30 hover:border-pink-400 hover:bg-pink-100/50'
+                )}
+              />
+              {!item.completed && (
+                <i className="fas fa-heart absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-pink-200 group-hover/checkbox:text-pink-400 transition-colors pointer-events-none"></i>
+              )}
+            </div>
+
+            <span
+            className={`flex-1 break-words min-w-0 text-[15px] sm:text-lg leading-relaxed ${
+              item.completed
+                ? 'line-through text-gray-400 font-normal italic'
+                : 'text-gray-700 font-semibold'
+            }`}
+          >
+              {item.text}
+            </span>
+          </div>
+
+          <div className="flex gap-2 shrink-0 items-center justify-end md:justify-center mt-2 md:mt-0 pt-2 md:pt-0 border-t border-gray-50 md:border-none">
+            {!item.completed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEdit(item)}
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-pink-400 hover:text-pink-600 hover:bg-pink-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
+              >
+                <i className="fas fa-edit text-sm"></i>
+              </Button>
+            )}
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-red-400 hover:text-red-600 hover:bg-red-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
+                >
+                  <i className="fas fa-trash text-sm"></i>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white rounded-3xl mx-4">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-xl font-bold">Delete this dream?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-white/60">
+                    Are you sure you want to remove "{item.text}" from our bucket list?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row gap-2">
+                  <AlertDialogCancel className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl mt-0">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteItem(item.id)}
+                    className="flex-1 bg-red-600 text-white hover:bg-red-700 border-none rounded-xl"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
