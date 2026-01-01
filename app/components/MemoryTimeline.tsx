@@ -7,6 +7,8 @@ import { type Schema } from '@/amplify/data/resource';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import AddMemoryForm from './AddMemoryForm';
 import { useMemories, type MemoryWithUrls } from '@/app/hooks/useMemories';
 import { useMilestones } from '@/app/hooks/useMilestones';
@@ -15,6 +17,7 @@ export default function MemoryTimeline() {
   const { memories, isLoading } = useMemories();
   const { nextMilestone, milestones } = useMilestones();
   const [editingMemory, setEditingMemory] = useState<MemoryWithUrls | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   // Helper to group memories
   const groupedMemories = memories.reduce((acc, memory) => {
@@ -193,14 +196,20 @@ export default function MemoryTimeline() {
                                   {/* Thumbnail */}
                                   {memory.imageUrls && memory.imageUrls.length > 0 && (
                                     <div className="flex-shrink-0">
-                                      <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 border-2 border-white shadow-md">
+                                      <div 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setLightboxImage(memory.imageUrls![0]);
+                                        }}
+                                        className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 border-2 border-white shadow-md cursor-zoom-in hover:shadow-lg transition-all"
+                                      >
                                         <img 
                                           src={memory.imageUrls[0]} 
                                           alt={memory.title}
                                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                         {memory.imageUrls.length > 1 && (
-                                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                             <span className="text-white font-bold text-xs">+{memory.imageUrls.length}</span>
                                           </div>
                                         )}
@@ -254,7 +263,14 @@ export default function MemoryTimeline() {
                                             </div>
                                             <div className="grid grid-cols-3 gap-2">
                                               {memory.imageUrls.map((url, i) => (
-                                                <div key={i} className="aspect-square rounded-lg overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                                                <div 
+                                                  key={i} 
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setLightboxImage(url);
+                                                  }}
+                                                  className="aspect-square rounded-lg overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow cursor-zoom-in"
+                                                >
                                                   <img 
                                                     src={url} 
                                                     alt={`${memory.title} ${i + 1}`} 
@@ -324,6 +340,35 @@ export default function MemoryTimeline() {
         onOpenChange={(open) => !open && setEditingMemory(null)}
         initialData={editingMemory}
       />
+
+      {/* Image Lightbox */}
+      <Dialog open={!!lightboxImage} onOpenChange={(open) => !open && setLightboxImage(null)}>
+        <DialogContent className="max-w-[95vw] md:max-w-[80vw] lg:max-w-[70vw] p-0 overflow-hidden bg-black/90 border-none shadow-2xl backdrop-blur-xl">
+          <VisuallyHidden>
+            <DialogHeader>
+              <DialogTitle>Image Preview</DialogTitle>
+            </DialogHeader>
+          </VisuallyHidden>
+          
+          <div className="relative w-full h-[80vh] flex items-center justify-center p-2">
+            <button 
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all shadow-lg border border-white/20 backdrop-blur-md"
+            >
+              <i className="fas fa-times text-xl"></i>
+            </button>
+            {lightboxImage && (
+              <motion.img 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={lightboxImage} 
+                alt="Memory Preview" 
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
