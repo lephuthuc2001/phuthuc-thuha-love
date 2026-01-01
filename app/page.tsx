@@ -13,16 +13,16 @@ export default function LoveStory() {
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        console.log('Listing images from media/img/ folder...');
+        console.log('Listing images from media/img/carousel/ folder...');
         const listResult = await list({
-          path: 'media/img/',
+          path: 'media/img/carousel/',
         });
 
         const paths = listResult.items
           .map(item => item.path)
-          .filter(path => path !== 'media/img/' && !path.endsWith('chibi-logo.png')); // Filter out folder and logo
+          .filter(path => path !== 'media/img/carousel/'); // Filter out the folder itseld
 
-        console.log('Found image paths:', paths);
+        console.log('Found carousel image paths:', paths);
 
         const urls = await Promise.all(
           paths.map(async (path) => {

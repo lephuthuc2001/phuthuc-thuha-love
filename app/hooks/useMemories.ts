@@ -17,7 +17,12 @@ export function useMemories() {
     queryKey: ['memories'],
     queryFn: async () => {
       const { data: items } = await client.models.Memory.list();
-      const sortedItems = (items || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sortedItems = (items || []).sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        // If same date, show the one created most recently at the top
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
       
       const itemsWithUrls = await Promise.all(
         sortedItems.map(async (item) => {

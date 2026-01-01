@@ -108,7 +108,7 @@ export default function Milestones() {
                       : 'bg-white text-pink-400 border-pink-200'
                   }`}>
                     <i className={`fas fa-${milestone.isReached ? (milestone.icon || 'check') : 'lock'} text-xs`}></i>
-                  </div>
+                  </div>  
                   <div>
                     <h4 className="font-bold text-gray-800 text-lg">{milestone.title}</h4>
                     <p className="text-sm text-gray-600">
