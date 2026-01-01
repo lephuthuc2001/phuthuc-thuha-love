@@ -14,7 +14,7 @@ export default function MemoryTimeline() {
   const { memories, isLoading } = useMemories();
   const { nextMilestone, milestones } = useMilestones();
   const [editingMemory, setEditingMemory] = useState<MemoryWithMedia | null>(null);
-  const [lightboxData, setLightboxData] = useState<{ media: { url: string; type: string }[]; index: number } | null>(null);
+  const [lightboxData, setLightboxData] = useState<{ media: { url: string; type: string }[]; index: number; memoryId: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Helper to group memories
@@ -154,10 +154,15 @@ export default function MemoryTimeline() {
                                 idx={idx}
                                 isExpanded={expandedId === memory.id}
                                 onToggle={(e) => toggleExpand(memory.id, e)}
-                                onImageClick={(index) => setLightboxData({ 
-                                    media: memory.media || (memory.imageUrls || []).map(url => ({ url, type: 'IMAGE' })), 
-                                    index 
-                                })}
+                                onImageClick={(url) => {
+                                  const media = memory.media || (memory.imageUrls || []).map(u => ({ url: u, type: 'IMAGE' }));
+                                  const index = media.findIndex(m => m.url === url);
+                                  setLightboxData({ 
+                                      media, 
+                                      index: index >= 0 ? index : 0,
+                                      memoryId: memory.id
+                                  });
+                                }}
                                 onEdit={(mem) => {
                                   setEditingMemory(mem);
                                 }}
@@ -208,6 +213,7 @@ export default function MemoryTimeline() {
 
       {/* Media Lightbox */}
       <MemoryLightbox 
+        key={lightboxData?.memoryId || 'none'}
         media={lightboxData?.media || []}
         initialIndex={lightboxData?.index || 0}
         isOpen={!!lightboxData}

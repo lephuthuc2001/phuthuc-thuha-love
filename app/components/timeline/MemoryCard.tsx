@@ -6,7 +6,7 @@ interface MemoryCardProps {
   idx: number; // This is the timeline index
   isExpanded: boolean;
   onToggle: (e: React.MouseEvent) => void;
-  onImageClick: (index: number) => void; // Changed to receive index of the image
+  onImageClick: (url: string) => void; // Changed to receive URL
   onEdit: (memory: MemoryWithMedia) => void;
 }
 
@@ -88,7 +88,7 @@ export function MemoryCard({
               <div
                 onClick={(e) => {
                   e.stopPropagation();
-                  onImageClick(0);
+                  onImageClick(memory.imageUrls![0]);
                 }}
                 className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 border border-white shadow-sm cursor-zoom-in"
               >
@@ -154,7 +154,7 @@ export function MemoryCard({
                         key={i}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onImageClick(i);
+                          onImageClick(url);
                         }}
                         className="aspect-square rounded-lg overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow cursor-zoom-in"
                       >

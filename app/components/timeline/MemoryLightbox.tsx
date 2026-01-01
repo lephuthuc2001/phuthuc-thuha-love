@@ -44,7 +44,11 @@ export function MemoryLightbox({ media, initialIndex, isOpen, onClose }: MemoryL
 
   if (!media.length) return null;
 
-  const currentItem = media[index];
+  // Use the state index if valid, otherwise fallback to initialIndex or 0
+  const safeIndex = index < media.length ? index : (initialIndex < media.length ? initialIndex : 0);
+  const currentItem = media[safeIndex];
+
+  if (!currentItem) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
