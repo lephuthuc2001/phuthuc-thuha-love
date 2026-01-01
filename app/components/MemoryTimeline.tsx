@@ -9,9 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import AddMemoryForm from './AddMemoryForm';
 import { useMemories, type MemoryWithUrls } from '@/app/hooks/useMemories';
+import { useMilestones } from '@/app/hooks/useMilestones';
 
 export default function MemoryTimeline() {
   const { memories, isLoading } = useMemories();
+  const { nextMilestone, milestones } = useMilestones();
   const [editingMemory, setEditingMemory] = useState<MemoryWithUrls | null>(null);
 
   // Helper to group memories
@@ -32,6 +34,13 @@ export default function MemoryTimeline() {
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent bubbling if needed
     setExpandedId(expandedId === id ? null : id);
+  };
+
+  // Determine if we should show a milestone marker for a specific year
+  const getMilestoneForYear = (year: string) => {
+    if (!nextMilestone) return null;
+    const milestoneYear = new Date(nextMilestone.date).getFullYear().toString();
+    return milestoneYear === year ? nextMilestone : null;
   };
 
   return (
@@ -59,7 +68,7 @@ export default function MemoryTimeline() {
 
             <div className="space-y-6">
               {/* Year Milestone Marker (Future) */}
-              {year === '2026' && (
+              {getMilestoneForYear(year) && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   whileInView={{ opacity: 1, scale: 1 }}
@@ -68,10 +77,12 @@ export default function MemoryTimeline() {
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 to-purple-500 opacity-50"></div>
                   <div className="flex flex-col items-center gap-2">
                     <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl animate-pulse">
-                      <i className="fas fa-star text-yellow-300"></i>
+                      <i className={`fas fa-${getMilestoneForYear(year)!.icon || 'star'} text-yellow-300`}></i>
                     </div>
-                    <h4 className="text-xl font-bold text-white">1 Year Anniversary</h4>
-                    <p className="text-sm text-pink-200 font-medium">Coming July 1, 2026 ✨</p>
+                    <h4 className="text-xl font-bold text-white">{getMilestoneForYear(year)!.title}</h4>
+                    <p className="text-sm text-pink-200 font-medium">
+                      Coming {new Date(getMilestoneForYear(year)!.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} ✨
+                    </p>
                   </div>
                 </motion.div>
               )}

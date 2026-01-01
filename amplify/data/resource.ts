@@ -23,6 +23,17 @@ const schema = a.schema({
       location: a.string(),
     })
     .authorization((allow) => [allow.authenticated()]),
+
+  Milestone: a
+    .model({
+      title: a.string().required(),
+      date: a.date().required(),
+      icon: a.string(),
+      isReached: a.boolean().default(false),
+      order: a.integer(),
+      category: a.string(), // e.g. "relationship_start", "anniversary", "other"
+    })
+    .authorization((allow) => [allow.authenticated()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

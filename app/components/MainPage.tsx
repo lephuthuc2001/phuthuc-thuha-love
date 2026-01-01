@@ -12,15 +12,12 @@ import { motion } from "motion/react";
 import { useState } from 'react';
 import AddMemoryForm from './AddMemoryForm';
 
-interface MainPageProps {
-  startDate: Date;
-  nextMilestoneDate: Date;
-  images: string[];
-}
+import { useMilestones } from '@/app/hooks/useMilestones';
 
-export default function MainPage({ startDate, nextMilestoneDate, images }: MainPageProps) {
+export default function MainPage({ images }: { images: string[] }) {
   const { signOut } = useAuthenticator();
   const [showAddMemory, setShowAddMemory] = useState(false);
+  const { startDate, nextMilestoneDate } = useMilestones();
 
   return (
     <motion.div 
@@ -36,7 +33,7 @@ export default function MainPage({ startDate, nextMilestoneDate, images }: MainP
         <MemoriesGallery images={images} />
         <MemoryTimeline />
         <BucketList />
-        <Milestones nextMilestoneDate={nextMilestoneDate} />
+        <Milestones />
         <SocialFollow />
       </main>
 

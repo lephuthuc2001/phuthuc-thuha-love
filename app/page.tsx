@@ -8,9 +8,6 @@ import { getUrl, list } from 'aws-amplify/storage';
 import { useState, useEffect } from 'react';
 
 export default function LoveStory() {
-  const startDate = new Date('2025-07-01T00:00:00');
-  const nextMilestoneDate = new Date('2026-07-01T00:00:00');
-
   const [images, setImages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -69,8 +66,6 @@ export default function LoveStory() {
         {({ signOut, user }) => (
           <div className="w-full h-full">
             <MainPage 
-              startDate={startDate}
-              nextMilestoneDate={nextMilestoneDate}
               images={images}
             />
           </div>
