@@ -19,9 +19,19 @@ const schema = a.schema({
       title: a.string().required(),
       description: a.string(),
       date: a.date().required(),
-      images: a.string().array(), // Stores S3 paths
+      images: a.string().array(), // Keep temporarily for migration
+      attachments: a.hasMany("MemoryAttachment", "memoryId"),
       cost: a.float(),
       location: a.string(),
+    })
+    .authorization((allow) => [allow.authenticated()]),
+
+  MemoryAttachment: a
+    .model({
+      path: a.string().required(),
+      type: a.enum(["IMAGE", "VIDEO", "AUDIO"]),
+      memoryId: a.id(),
+      memory: a.belongsTo("Memory", "memoryId"),
     })
     .authorization((allow) => [allow.authenticated()]),
 

@@ -11,6 +11,7 @@ import { useMemories } from '@/app/hooks/useMemories';
 import { useMilestones } from '@/app/hooks/useMilestones';
 import { Skeleton } from "@/components/ui/skeleton"
 import AddMemoryForm from "./AddMemoryForm"
+import { MigrationTool } from "./MigrationTool";
 
 export default function MemoryTimeline() {
   const { memories, isLoading } = useMemories();
@@ -215,6 +216,7 @@ export default function MemoryTimeline() {
         onClose={() => setLightboxData(null)} 
       />
 
+      <MigrationTool />
     </section>
   );
 }

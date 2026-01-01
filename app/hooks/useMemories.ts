@@ -7,7 +7,7 @@ import { type Schema } from '@/amplify/data/resource';
 
 const client = generateClient<Schema>();
 
-export type MemoryWithUrls = Schema['Memory']['type'] & { imageUrls?: string[] };
+export type MemoryWithUrls = Schema['Memory']['type'] & { imageUrls?: string[]; attachments?: Schema['MemoryAttachment']['type'][] };
 
 export function useMemories() {
   const queryClient = useQueryClient();
@@ -17,32 +17,42 @@ export function useMemories() {
     queryKey: ['memories'],
     queryFn: async () => {
       const { data: items } = await client.models.Memory.list();
-      const sortedItems = (items || []).sort((a, b) => {
-        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-        if (dateDiff !== 0) return dateDiff;
-        // If same date, show the one created most recently at the top
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
       
-      const itemsWithUrls = await Promise.all(
-        sortedItems.map(async (item) => {
-          if (item.images && item.images.length > 0) {
-            const urls = await Promise.all(
-              item.images.map(async (path) => {
+      const itemsWithAttachments = await Promise.all(
+        items.map(async (item) => {
+          // Fetch attachments for this memory
+          const { data: attachments } = await client.models.MemoryAttachment.list({
+            filter: { memoryId: { eq: item.id } }
+          });
+          
+          let urls: string[] = [];
+          
+          if (attachments && attachments.length > 0) {
+            urls = await Promise.all(
+              attachments.map(async (att) => {
                 try {
-                  const result = await getUrl({ path: path as string });
+                  const result = await getUrl({ path: att.path });
                   return result.url.toString();
                 } catch (e) {
-                  return null;
+                  return '';
                 }
               })
             );
-            return { ...item, imageUrls: urls.filter(Boolean) as string[] };
           }
-          return { ...item, imageUrls: [] };
+          
+          return { 
+            ...item, 
+            attachments: attachments || [], 
+            imageUrls: urls.filter(Boolean) as string[] 
+          };
         })
       );
-      return itemsWithUrls;
+
+      return itemsWithAttachments.sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
     },
   });
 
@@ -56,39 +66,31 @@ export function useMemories() {
       cost?: number;
       location?: string;
     }) => {
-      const { data: newMemory } = await client.models.Memory.create(input);
+      // 1. Create Memory
+      const { data: newMemory } = await client.models.Memory.create({
+        title: input.title,
+        date: input.date,
+        description: input.description,
+        cost: input.cost,
+        location: input.location,
+      });
+
+      // 2. Create Attachments
+      if (input.images && input.images.length > 0) {
+        await Promise.all(
+          input.images.map(path => 
+            client.models.MemoryAttachment.create({
+              memoryId: newMemory.id,
+              path,
+              type: 'IMAGE'
+            })
+          )
+        );
+      }
+
       return newMemory;
     },
-    onMutate: async (newMemory) => {
-      // Trigger cancellation but don't await it for maximum snappiness
-      queryClient.cancelQueries({ queryKey: ['memories'] });
-      
-      const previousMemories = queryClient.getQueryData<MemoryWithUrls[]>(['memories']);
-      
-      if (previousMemories) {
-        const optimisticMemory = {
-          ...newMemory,
-          id: `temp-${Date.now()}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          imageUrls: [],
-          images: newMemory.images || [],
-          description: newMemory.description || null,
-          cost: newMemory.cost || null,
-          location: newMemory.location || null,
-        } as MemoryWithUrls;
-
-        queryClient.setQueryData(['memories'], [optimisticMemory, ...previousMemories]);
-      }
-      
-      return { previousMemories };
-    },
-    onError: (err, newMemory, context) => {
-      if (context?.previousMemories) {
-        queryClient.setQueryData(['memories'], context.previousMemories);
-      }
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memories'] });
     },
   });
@@ -104,28 +106,49 @@ export function useMemories() {
       cost?: number;
       location?: string;
     }) => {
-      const { data: updatedMemory } = await client.models.Memory.update(input);
+      // 1. Update Memory fields
+      const { data: updatedMemory } = await client.models.Memory.update({
+        id: input.id,
+        title: input.title,
+        date: input.date,
+        description: input.description,
+        cost: input.cost,
+        location: input.location,
+      });
+
+      // 2. Sync Attachments
+      if (input.images) {
+        // Fetch existing
+        const { data: existingAttachments } = await client.models.MemoryAttachment.list({
+          filter: { memoryId: { eq: input.id } }
+        });
+
+        const newPaths = input.images;
+        const currentPaths = existingAttachments.map(a => a.path);
+
+        // Determine Additions
+        const toAdd = newPaths.filter(p => !currentPaths.includes(p));
+        
+        // Determine Deletions
+        const toDelete = existingAttachments.filter(a => !newPaths.includes(a.path));
+
+        await Promise.all([
+          ...toAdd.map(path => 
+            client.models.MemoryAttachment.create({
+              memoryId: input.id,
+              path,
+              type: 'IMAGE'
+            })
+          ),
+          ...toDelete.map(att => 
+            client.models.MemoryAttachment.delete({ id: att.id })
+          )
+        ]);
+      }
+
       return updatedMemory;
     },
-    onMutate: async (updatedMemory) => {
-      queryClient.cancelQueries({ queryKey: ['memories'] });
-      const previousMemories = queryClient.getQueryData<MemoryWithUrls[]>(['memories']);
-      
-      if (previousMemories) {
-        queryClient.setQueryData(
-          ['memories'],
-          previousMemories.map((m) => (m.id === updatedMemory.id ? { ...m, ...updatedMemory } : m))
-        );
-      }
-      
-      return { previousMemories };
-    },
-    onError: (err, updatedMemory, context) => {
-      if (context?.previousMemories) {
-        queryClient.setQueryData(['memories'], context.previousMemories);
-      }
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memories'] });
     },
   });
@@ -133,27 +156,19 @@ export function useMemories() {
   // Delete Memory Mutation
   const deleteMemoryMutation = useMutation({
     mutationFn: async (id: string) => {
+      // 1. Delete Attachments first
+      const { data: attachments } = await client.models.MemoryAttachment.list({
+         filter: { memoryId: { eq: id } } 
+      });
+      
+      await Promise.all(
+        attachments.map(att => client.models.MemoryAttachment.delete({ id: att.id }))
+      );
+
+      // 2. Delete Memory
       await client.models.Memory.delete({ id });
     },
-    onMutate: async (id) => {
-      queryClient.cancelQueries({ queryKey: ['memories'] });
-      const previousMemories = queryClient.getQueryData<MemoryWithUrls[]>(['memories']);
-      
-      if (previousMemories) {
-        queryClient.setQueryData(
-          ['memories'],
-          previousMemories.filter((m) => m.id !== id)
-        );
-      }
-      
-      return { previousMemories };
-    },
-    onError: (err, id, context) => {
-      if (context?.previousMemories) {
-        queryClient.setQueryData(['memories'], context.previousMemories);
-      }
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memories'] });
     },
   });

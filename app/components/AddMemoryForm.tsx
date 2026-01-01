@@ -79,11 +79,17 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         cost: 0,
         location: '',
       });
-      setExistingImages(initialData?.images && initialData?.imageUrls ? initialData.images.map((path: string, i: number) => ({
-        id: `exist-${path}-${i}`,
-        path,
-        url: initialData.imageUrls[i]
-      })) : []);
+
+      // Populate existing images from attachments
+      if (initialData?.attachments) {
+        setExistingImages(initialData.attachments.map((att: any, i: number) => ({
+          id: att.id,
+          path: att.path,
+          url: initialData.imageUrls?.[i] || ''
+        })));
+      } else {
+        setExistingImages([]);
+      }
       
       newFiles.forEach(item => URL.revokeObjectURL(item.preview));
       setNewFiles([]);
