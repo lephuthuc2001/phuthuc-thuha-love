@@ -72,7 +72,6 @@ export function useMemories() {
       date: string;
       description?: string;
       attachments?: { path: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO' }[];
-      images?: string[]; // Legacy support
       cost?: number;
       location?: string;
     }) => {
@@ -89,8 +88,7 @@ export function useMemories() {
 
 
       // 2. Create Attachments
-      const attachmentsToCreate = input.attachments || 
-        (input.images ? input.images.map(path => ({ path, type: 'IMAGE' as const })) : []);
+      const attachmentsToCreate = input.attachments || [];
 
       if (attachmentsToCreate.length > 0) {
         await Promise.all(
@@ -119,7 +117,6 @@ export function useMemories() {
       date?: string;
       description?: string;
       attachments?: { path: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO' }[];
-      images?: string[]; // Legacy
       cost?: number;
       location?: string;
     }) => {
@@ -137,8 +134,7 @@ export function useMemories() {
 
 
       // 2. Sync Attachments
-      const newAttachments = input.attachments || 
-        (input.images ? input.images.map(path => ({ path, type: 'IMAGE' as const })) : null);
+      const newAttachments = input.attachments;
 
       if (newAttachments) {
         // Fetch existing

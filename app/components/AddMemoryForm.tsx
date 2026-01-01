@@ -182,8 +182,6 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         cost: data.cost || 0,
         location: data.location || '',
         attachments: attachments,
-        // Legacy images field populated with just images for now, or just empty
-        images: attachments.filter(a => a.type === 'IMAGE').map(a => a.path), 
       };
 
       if (initialData) {

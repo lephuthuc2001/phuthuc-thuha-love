@@ -19,7 +19,6 @@ const schema = a.schema({
       title: a.string().required(),
       description: a.string(),
       date: a.date().required(),
-      images: a.string().array(), // Keep temporarily for migration
       attachments: a.hasMany("MemoryAttachment", "memoryId"),
       cost: a.float(),
       location: a.string(),
