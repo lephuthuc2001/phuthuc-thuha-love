@@ -84,40 +84,34 @@ export function MemoryLightbox({ media, initialIndex, isOpen, onClose }: MemoryL
 
         {/* Main Content Area */}
         <div className="relative w-full h-full flex items-center justify-center p-4 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={index}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.8}
-              onDragEnd={handleDragEnd}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="w-full h-full flex items-center justify-center touch-pan-y"
-            >
-              {currentItem.type === 'VIDEO' ? (
-                 <video 
-                   src={currentItem.url} 
-                   controls 
-                   autoPlay 
-                   className="max-w-full max-h-full rounded-lg shadow-2xl"
-                 />
-              ) : currentItem.type === 'AUDIO' ? (
-                 <div className="bg-white/10 p-8 rounded-2xl flex flex-col items-center gap-4 backdrop-blur-md border border-white/20">
-                    <i className="fas fa-music text-6xl text-pink-400"></i>
-                    <audio src={currentItem.url} controls className="w-full min-w-[300px]" />
-                 </div>
-              ) : (
-                <img
-                  src={currentItem.url}
-                  alt={`Media ${index + 1}`}
-                  className="max-w-full max-h-full object-contain"
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={index}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.8}
+            onDragEnd={handleDragEnd}
+            className="w-full h-full flex items-center justify-center touch-pan-y"
+          >
+            {currentItem.type === 'VIDEO' ? (
+               <video 
+                 src={currentItem.url} 
+                 controls 
+                 autoPlay 
+                 className="max-w-full max-h-full rounded-lg shadow-2xl"
+               />
+            ) : currentItem.type === 'AUDIO' ? (
+               <div className="bg-white/10 p-8 rounded-2xl flex flex-col items-center gap-4 backdrop-blur-md border border-white/20">
+                  <i className="fas fa-music text-6xl text-pink-400"></i>
+                  <audio src={currentItem.url} controls className="w-full min-w-[300px]" />
+               </div>
+            ) : (
+              <img
+                src={currentItem.url}
+                alt={`Media ${index + 1}`}
+                className="max-w-full max-h-full object-contain"
+              />
+            )}
+          </motion.div>
 
           {/* Mobile Counter / Dots */}
           <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-50">
