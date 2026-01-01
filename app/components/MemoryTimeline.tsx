@@ -16,7 +16,7 @@ export default function MemoryTimeline() {
   const { memories, isLoading } = useMemories();
   const { nextMilestone, milestones } = useMilestones();
   const [editingMemory, setEditingMemory] = useState<MemoryWithUrls | null>(null);
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [lightboxData, setLightboxData] = useState<{ images: string[]; index: number } | null>(null);
 
   // Helper to group memories
   const groupedMemories = memories.reduce((acc, memory) => {
@@ -157,7 +157,7 @@ export default function MemoryTimeline() {
                                 idx={idx}
                                 isExpanded={expandedId === memory.id}
                                 onToggle={(e) => toggleExpand(memory.id, e)}
-                                onImageClick={setLightboxImage}
+                                onImageClick={(index) => setLightboxData({ images: memory.imageUrls || [], index })}
                                 onEdit={(mem) => {
                                   setEditingMemory(mem);
                                 }}
@@ -209,8 +209,10 @@ export default function MemoryTimeline() {
 
       {/* Image Lightbox */}
       <MemoryLightbox 
-        image={lightboxImage} 
-        onClose={() => setLightboxImage(null)} 
+        images={lightboxData?.images || []}
+        initialIndex={lightboxData?.index || 0}
+        isOpen={!!lightboxData}
+        onClose={() => setLightboxData(null)} 
       />
 
     </section>

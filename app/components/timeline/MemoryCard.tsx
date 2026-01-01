@@ -1,12 +1,12 @@
-import { motion, AnimatePresence } from "motion/react";
-import type { MemoryWithUrls } from "@/app/hooks/useMemories";
+import { MemoryWithUrls } from "@/app/hooks/useMemories";
+import { AnimatePresence, motion } from "motion/react";
 
 interface MemoryCardProps {
   memory: MemoryWithUrls;
-  idx: number;
+  idx: number; // This is the timeline index
   isExpanded: boolean;
   onToggle: (e: React.MouseEvent) => void;
-  onImageClick: (url: string) => void;
+  onImageClick: (index: number) => void; // Changed to receive index of the image
   onEdit: (memory: MemoryWithUrls) => void;
 }
 
@@ -88,7 +88,7 @@ export function MemoryCard({
               <div
                 onClick={(e) => {
                   e.stopPropagation();
-                  onImageClick(memory.imageUrls![0]);
+                  onImageClick(0);
                 }}
                 className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 border border-white shadow-sm cursor-zoom-in"
               >
@@ -154,7 +154,7 @@ export function MemoryCard({
                         key={i}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onImageClick(url);
+                          onImageClick(i);
                         }}
                         className="aspect-square rounded-lg overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow cursor-zoom-in"
                       >
