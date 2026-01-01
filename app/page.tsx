@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 
 export default function LoveStory() {
   const startDate = new Date('2025-07-01T00:00:00');
-  const nextMilestoneDate = new Date('2026-01-01T00:00:00');
+  const nextMilestoneDate = new Date('2026-07-01T00:00:00');
 
   const [images, setImages] = useState<string[]>([]);
 

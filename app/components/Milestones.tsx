@@ -104,13 +104,23 @@ export default function Milestones({ nextMilestoneDate }: MilestonesProps) {
               </div>
             </motion.div>
             
+            <motion.div variants={item} className="flex items-center relative z-10">
+              <div className="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-white shadow-lg mr-4 border-2 border-white">
+                <i className="fas fa-heart text-xs"></i>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 text-lg">6 Months</h4>
+                <p className="text-sm text-gray-600">January 1, 2026</p>
+              </div>
+            </motion.div>
+
             <motion.div variants={item} className="flex items-center relative z-10 opacity-60">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-pink-400 shadow-sm mr-4 border-2 border-pink-200">
                 <i className="fas fa-lock text-xs"></i>
               </div>
               <div>
-                <h4 className="font-bold text-gray-800 text-lg">6 Months</h4>
-                <p className="text-sm text-gray-600">January 1, 2026</p>
+                <h4 className="font-bold text-gray-800 text-lg">1 Year</h4>
+                <p className="text-sm text-gray-600">July 1, 2026</p>
               </div>
             </motion.div>
           </motion.div>
@@ -125,7 +135,7 @@ export default function Milestones({ nextMilestoneDate }: MilestonesProps) {
         <Card className="glass-card bg-transparent border-2 border-pink-300 rounded-3xl p-8 flex flex-col justify-center text-center shadow-[0_0_20px_rgba(236,72,153,0.3)] h-full">
           <CardContent className="p-0 text-center">
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Next Milestone</h3>
-            <div className="text-4xl font-bold text-pink-600 mb-4 script-font">6 Months Anniversary</div>
+            <div className="text-4xl font-bold text-pink-600 mb-4 script-font">1 Year Anniversary</div>
             
             <div className="grid grid-cols-4 gap-2 mb-6">
               <div className="bg-white/50 rounded-lg p-2">

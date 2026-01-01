@@ -210,6 +210,13 @@ export default function BucketList() {
     }
   };
 
+  const layoutTransition = {
+    type: "spring",
+    stiffness: 500,
+    damping: 30,
+    mass: 0.8
+  } as const;
+
   const itemVariants = {
     hidden: { opacity: 0, scale: 0.98, y: 5 },
     show: { 
@@ -221,20 +228,13 @@ export default function BucketList() {
         stiffness: 500,
         damping: 30,
         mass: 0.8
-      }
+      } as const
     },
     exit: { 
       opacity: 0, 
       scale: 0.95, 
       transition: { duration: 0.15 } 
     }
-  };
-
-  const layoutTransition = {
-    type: "spring",
-    stiffness: 500,
-    damping: 30,
-    mass: 0.8
   };
 
   return (
@@ -256,7 +256,7 @@ export default function BucketList() {
         <Card className="glass-card bg-white/95 backdrop-blur-md border-none rounded-3xl p-5 sm:p-6 md:p-8 shadow-2xl max-w-3xl mx-auto overflow-hidden">
         <CardContent className="p-0">
           {/* Stats */}
-          <div className="mb-10 space-y-4">
+          <motion.div layout className="mb-10 space-y-4">
             <div className="flex justify-between items-end">
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-widest text-gray-400 font-bold">Our Journey</p>
@@ -276,18 +276,18 @@ export default function BucketList() {
             <div className="relative h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner">
               <Progress value={progress} className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 transition-all duration-1000" />
             </div>
-          </div>
+          </motion.div>
 
           {/* Add New Item */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout" initial={false}>
             {isAdding ? (
               <motion.div
+                layout
                 key="input"
-                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="overflow-hidden p-1"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="mb-8 p-1"
               >
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Input
@@ -362,6 +362,7 @@ export default function BucketList() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    transition={layoutTransition}
                     className="text-center py-16 text-gray-400"
                   >
                     <i className="fas fa-heart text-7xl mb-6 text-pink-100"></i>
@@ -377,121 +378,121 @@ export default function BucketList() {
                       initial="hidden"
                       animate="show"
                       exit="exit"
-                      className={`group flex flex-col md:flex-row md:items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 ${
+                      className={`w-full group flex flex-col md:flex-row md:items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 ${
                         item.completed
                           ? 'bg-green-50/50 border-green-100 shadow-sm'
                           : 'bg-white border-gray-100 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/5'
                       }`}
                     >
-                    {editingItem?.id === item.id ? (
-                      <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full animate-in fade-in slide-in-from-left-2 duration-300 p-1">
-                        <Input
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') saveEdit();
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Escape') setEditingItem(null);
-                          }}
-                          className="flex-1 h-12 sm:h-14 rounded-xl border-2 border-pink-200 focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 bg-white text-base px-4 transition-all"
-                          autoFocus
-                        />
-                        <div className="flex gap-2 justify-end sm:shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={saveEdit}
-                            className="flex-1 sm:flex-none text-green-500 hover:bg-green-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-green-100 rounded-xl transition-all active:scale-95"
-                          >
-                            <i className="fas fa-check"></i>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingItem(null)}
-                            className="flex-1 sm:flex-none text-gray-400 hover:bg-gray-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-gray-100 rounded-xl transition-all active:scale-95"
-                          >
-                            <i className="fas fa-times"></i>
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-start gap-4 flex-1 min-w-0">
-                          <div className="pt-0.5 shrink-0 relative group/checkbox">
-                            <Checkbox 
-                              checked={!!item.completed}
-                              onCheckedChange={() => toggleComplete(item)}
-                              className={cn(
-                                "peer h-8 w-8 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white transition-all duration-300",
-                                item.completed
-                                  ? 'border-pink-500'
-                                  : 'border-pink-200 bg-pink-50/30 hover:border-pink-400 hover:bg-pink-100/50'
-                              )}
-                            />
-                            {!item.completed && (
-                              <i className="fas fa-heart absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-pink-200 group-hover/checkbox:text-pink-400 transition-colors pointer-events-none"></i>
-                            )}
+                      {editingItem?.id === item.id ? (
+                        <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full animate-in fade-in slide-in-from-left-2 duration-300 p-1">
+                          <Input
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') saveEdit();
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') setEditingItem(null);
+                            }}
+                            className="flex-1 h-12 sm:h-14 rounded-xl border-2 border-pink-200 focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 bg-white text-base px-4 transition-all"
+                            autoFocus
+                          />
+                          <div className="flex gap-2 justify-end sm:shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={saveEdit}
+                              className="flex-1 sm:flex-none text-green-500 hover:bg-green-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-green-100 rounded-xl transition-all active:scale-95"
+                            >
+                              <i className="fas fa-check"></i>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingItem(null)}
+                              className="flex-1 sm:flex-none text-gray-400 hover:bg-gray-100 h-11 w-full sm:w-12 bg-white shadow-sm border border-gray-100 rounded-xl transition-all active:scale-95"
+                            >
+                              <i className="fas fa-times"></i>
+                            </Button>
                           </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-4 flex-1 min-w-0">
+                            <div className="pt-0.5 shrink-0 relative group/checkbox">
+                              <Checkbox 
+                                checked={!!item.completed}
+                                onCheckedChange={() => toggleComplete(item)}
+                                className={cn(
+                                  "peer h-8 w-8 rounded-full border-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-pink-500 data-[state=checked]:text-white transition-all duration-300",
+                                  item.completed
+                                    ? 'border-pink-500'
+                                    : 'border-pink-200 bg-pink-50/30 hover:border-pink-400 hover:bg-pink-100/50'
+                                )}
+                              />
+                              {!item.completed && (
+                                <i className="fas fa-heart absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-pink-200 group-hover/checkbox:text-pink-400 transition-colors pointer-events-none"></i>
+                              )}
+                            </div>
 
-                          <span
-                            className={`flex-1 transition-all duration-300 break-words min-w-0 text-[15px] sm:text-lg leading-relaxed ${
+                            <span
+                            className={`flex-1 break-words min-w-0 text-[15px] sm:text-lg leading-relaxed ${
                               item.completed
                                 ? 'line-through text-gray-400 font-normal italic'
                                 : 'text-gray-700 font-semibold'
                             }`}
                           >
-                            {item.text}
-                          </span>
-                        </div>
+                              {item.text}
+                            </span>
+                          </div>
 
-                        <div className="flex gap-2 shrink-0 items-center justify-end md:justify-center mt-2 md:mt-0 pt-2 md:pt-0 border-t border-gray-50 md:border-none">
-                          {!item.completed && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(item)}
-                              className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-pink-400 hover:text-pink-600 hover:bg-pink-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
-                            >
-                              <i className="fas fa-edit text-sm"></i>
-                            </Button>
-                          )}
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                          <div className="flex gap-2 shrink-0 items-center justify-end md:justify-center mt-2 md:mt-0 pt-2 md:pt-0 border-t border-gray-50 md:border-none">
+                            {!item.completed && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-red-400 hover:text-red-600 hover:bg-red-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
+                                onClick={() => handleEdit(item)}
+                                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-pink-400 hover:text-pink-600 hover:bg-pink-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
                               >
-                                <i className="fas fa-trash text-sm"></i>
+                                <i className="fas fa-edit text-sm"></i>
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white rounded-3xl mx-4">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-xl font-bold">Delete this dream?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-white/60">
-                                  Are you sure you want to remove "{item.text}" from our bucket list?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter className="flex-row gap-2">
-                                <AlertDialogCancel className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl mt-0">Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteItem(item.id)}
-                                  className="flex-1 bg-red-600 text-white hover:bg-red-700 border-none rounded-xl"
+                            )}
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all text-red-400 hover:text-red-600 hover:bg-red-50 h-9 w-9 sm:h-11 sm:w-11 rounded-xl active:scale-90 duration-200"
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </>
-                    )}
-                  </motion.div>
-                ))
-              )}
+                                  <i className="fas fa-trash text-sm"></i>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="glass-card bg-black/90 backdrop-blur-xl border-white/10 text-white rounded-3xl mx-4">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="text-xl font-bold">Delete this dream?</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-white/60">
+                                    Are you sure you want to remove "{item.text}" from our bucket list?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="flex-row gap-2">
+                                  <AlertDialogCancel className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl mt-0">Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteItem(item.id)}
+                                    className="flex-1 bg-red-600 text-white hover:bg-red-700 border-none rounded-xl"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </>
+                      )}
+                    </motion.div>
+                  ))
+                )}
               </AnimatePresence>
             </div>
           </div>

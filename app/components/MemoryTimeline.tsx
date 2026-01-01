@@ -58,6 +58,24 @@ export default function MemoryTimeline() {
             </motion.div>
 
             <div className="space-y-6">
+              {/* Year Milestone Marker (Future) */}
+              {year === '2026' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  className="mb-8 p-6 rounded-3xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-2 border-white/20 backdrop-blur-md text-center relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 to-purple-500 opacity-50"></div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white text-xl animate-pulse">
+                      <i className="fas fa-star text-yellow-300"></i>
+                    </div>
+                    <h4 className="text-xl font-bold text-white">1 Year Anniversary</h4>
+                    <p className="text-sm text-pink-200 font-medium">Coming July 1, 2026 ✨</p>
+                  </div>
+                </motion.div>
+              )}
+
               {Object.keys(groupedMemories[year]).map(month => (
                 <div key={month}>
                   {/* Month Header */}
