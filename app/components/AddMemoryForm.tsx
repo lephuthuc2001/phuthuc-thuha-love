@@ -48,9 +48,9 @@ interface AddMemoryFormProps {
 }
 
 export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMemoryFormProps) {
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>(initialData?.images || []);
-  const [filePreviews, setFilePreviews] = useState<string[]>([]);
+  const [newFiles, setNewFiles] = useState<{ id: string; file: File; preview: string }[]>([]);
+  const [existingImages, setExistingImages] = useState<{ id: string; path: string; url: string }[]>([]);
+
   const [displayCost, setDisplayCost] = useState('');
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<MemoryFormValues>({
@@ -79,9 +79,16 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         cost: 0,
         location: '',
       });
-      setExistingImages(initialData?.images || []); 
+      setExistingImages(initialData?.images && initialData?.imageUrls ? initialData.images.map((path: string, i: number) => ({
+        id: `exist-${path}-${i}`,
+        path,
+        url: initialData.imageUrls[i]
+      })) : []);
+      
+      newFiles.forEach(item => URL.revokeObjectURL(item.preview));
       setNewFiles([]);
-      setFilePreviews([]);
+
+
       
       // Initialize display cost
       if (initialData?.cost) {
@@ -112,21 +119,27 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setNewFiles(prev => [...prev, ...files]);
-      
-      const newPreviews = files.map(file => URL.createObjectURL(file));
-      setFilePreviews(prev => [...prev, ...newPreviews]);
+      const newItems = files.map(file => ({
+        id: Math.random().toString(36).substring(7) + Date.now(),
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      setNewFiles(prev => [...prev, ...newItems]);
     }
   };
 
-  const removeFile = (index: number) => {
-    setNewFiles(prev => prev.filter((_, i) => i !== index));
-    setFilePreviews(prev => prev.filter((_, i) => i !== index));
+
+  const removeFile = (id: string) => {
+    const itemToRemove = newFiles.find(item => item.id === id);
+    if (itemToRemove) URL.revokeObjectURL(itemToRemove.preview);
+    setNewFiles(prev => prev.filter(item => item.id !== id));
   };
+
   
-  const removeExisting = (index: number) => {
-    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  const removeExisting = (id: string) => {
+    setExistingImages(prev => prev.filter(item => item.id !== id));
   };
+
 
   const { createMemory, updateMemory, deleteMemory, isSubmitting: isHookSubmitting } = useMemories();
   const [internalSubmitting, setInternalSubmitting] = useState(false);
@@ -136,16 +149,17 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     setInternalSubmitting(true);
 
     try {
-      let imagePaths: string[] = [...existingImages];
+      let imagePaths: string[] = existingImages.map(img => img.path);
 
-      for (const file of newFiles) {
-        const path = `media/memories/${Date.now()}-${file.name}`;
+      for (const item of newFiles) {
+        const path = `media/memories/${Date.now()}-${item.file.name}`;
         await uploadData({
           path,
-          data: file,
+          data: item.file,
         }).result;
         imagePaths.push(path);
       }
+
 
       const input = {
         title: data.title,
@@ -164,8 +178,9 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
 
       console.log('Memory saved successfully!');
       reset();
+      newFiles.forEach(item => URL.revokeObjectURL(item.preview));
       setNewFiles([]);
-      setFilePreviews([]);
+
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving memory:', error);
@@ -261,20 +276,20 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
             <Label className="text-white/80">Photos</Label>
             
             {/* Recent/Existing Files Grid */}
-            {(existingImages.length > 0 || filePreviews.length > 0) && (
+            {(existingImages.length > 0 || newFiles.length > 0) && (
               <div className="grid grid-cols-3 gap-2 mb-3">
-                {initialData?.imageUrls && existingImages.map((path, i) => {
+                {existingImages.map((img) => {
                    return (
-                    <div key={`exist-${i}`} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
+                    <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
                       <div className="w-full h-full bg-white/5 flex items-center justify-center text-xs text-white/50">
                          <i className="fas fa-image text-2xl"></i>
                       </div> 
-                       {initialData.imageUrls && initialData.imageUrls[i] && (
-                          <img src={initialData.imageUrls[i]} alt="existing" className="absolute inset-0 w-full h-full object-cover" />
-                       )}
+                      {img.url && (
+                        <img src={img.url} alt="existing" className="absolute inset-0 w-full h-full object-cover" />
+                      )}
                       <button 
                         type="button"
-                        onClick={() => removeExisting(i)}
+                        onClick={() => removeExisting(img.id)}
                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <i className="fas fa-times"></i>
@@ -282,13 +297,13 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
                     </div>
                    )
                 })}
-
-                {filePreviews.map((src, i) => (
-                  <div key={`new-${i}`} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
-                    <img src={src} alt="preview" className="w-full h-full object-cover" />
+ 
+                {newFiles.map((item) => (
+                  <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
+                    <img src={item.preview} alt="preview" className="w-full h-full object-cover" />
                     <button 
                       type="button"
-                      onClick={() => removeFile(i)}
+                      onClick={() => removeFile(item.id)}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <i className="fas fa-times"></i>
@@ -297,6 +312,7 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
                 ))}
               </div>
             )}
+
 
             <label className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-white/20 border-dashed rounded-xl cursor-pointer hover:bg-white/5 transition-colors">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
