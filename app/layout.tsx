@@ -5,6 +5,7 @@ import Script from "next/script";
 import BackgroundAnimation from "@/app/components/BackgroundAnimation";
 import MusicPlayer from "@/app/components/MusicPlayer";
 import ConfigureAmplifyClientSide from "@/app/components/ConfigureAmplifyClientSide";
+import Providers from "@/app/components/Providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,11 +28,13 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <ConfigureAmplifyClientSide />
-        <BackgroundAnimation />
-        <MusicPlayer />
-        {children}
-        <Script src="https://www.tiktok.com/embed.js" strategy="lazyOnload" />
+        <Providers>
+          <ConfigureAmplifyClientSide />
+          <BackgroundAnimation />
+          <MusicPlayer />
+          {children}
+          <Script src="https://www.tiktok.com/embed.js" strategy="lazyOnload" />
+        </Providers>
       </body>
     </html>
   );

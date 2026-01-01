@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
 import { type Schema } from '@/amplify/data/resource';
+import { useMemories } from '@/app/hooks/useMemories';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -30,7 +30,6 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-const client = generateClient<Schema>();
 
 const memorySchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -51,12 +50,11 @@ interface AddMemoryFormProps {
 export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMemoryFormProps) {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>(initialData?.images || []);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [filePreviews, setFilePreviews] = useState<string[]>([]);
   const [displayCost, setDisplayCost] = useState('');
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<MemoryFormValues>({
-    resolver: zodResolver(memorySchema),
+    resolver: zodResolver(memorySchema as any),
     defaultValues: {
       cost: 0,
       title: '',
@@ -130,8 +128,12 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const { createMemory, updateMemory, deleteMemory, isSubmitting: isHookSubmitting } = useMemories();
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+  const isSubmitting = internalSubmitting || isHookSubmitting;
+
   const onSubmit = async (data: MemoryFormValues) => {
-    setIsSubmitting(true);
+    setInternalSubmitting(true);
 
     try {
       let imagePaths: string[] = [...existingImages];
@@ -145,25 +147,19 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         imagePaths.push(path);
       }
 
+      const input = {
+        title: data.title,
+        description: data.description || '',
+        date: data.date,
+        cost: data.cost || 0,
+        location: data.location || '',
+        images: imagePaths,
+      };
+
       if (initialData) {
-         await client.models.Memory.update({
-          id: initialData.id,
-          title: data.title,
-          description: data.description || '',
-          date: data.date,
-          cost: data.cost || 0,
-          location: data.location || '',
-          images: imagePaths,
-        });
+        await updateMemory({ id: initialData.id, ...input });
       } else {
-        await client.models.Memory.create({
-          title: data.title,
-          description: data.description || '',
-          date: data.date,
-          cost: data.cost || 0,
-          location: data.location || '',
-          images: imagePaths,
-        });
+        await createMemory(input);
       }
 
       console.log('Memory saved successfully!');
@@ -174,20 +170,21 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     } catch (error) {
       console.error('Error saving memory:', error);
     } finally {
-      setIsSubmitting(false);
+      setInternalSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
     if (!initialData) return;
-    setIsSubmitting(true);
+    setInternalSubmitting(true);
     try {
-      await client.models.Memory.delete({ id: initialData.id });
+      await deleteMemory(initialData.id);
       console.log('Memory deleted');
       onOpenChange(false);
     } catch (error) {
       console.error('Error deleting memory:', error);
-      setIsSubmitting(false);
+    } finally {
+      setInternalSubmitting(false);
     }
   };
 

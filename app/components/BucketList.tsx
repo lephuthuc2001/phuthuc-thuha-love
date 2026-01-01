@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Initialize client lazily outside to avoid multiple instances, but handle configuration state
 let client: any = null;
@@ -33,13 +34,11 @@ const MotionButton = motion(Button);
 type BucketItem = Schema["BucketItem"]["type"];
 
 export default function BucketList() {
-  const [items, setItems] = useState<BucketItem[]>([]);
+  const queryClient = useQueryClient();
   const [newItem, setNewItem] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<BucketItem | null>(null);
   const [editText, setEditText] = useState('');
-
 
   // Lazy initialize Amplify client
   if (!client) {
@@ -50,117 +49,135 @@ export default function BucketList() {
     }
   }
 
-  // Subscribe to real-time updates
-  useEffect(() => {
-    // Defensive check to see if the model exists in the current client configuration
-    const bucketModel = (client.models as any)?.BucketItem;
-    
-    if (!bucketModel) {
-      console.warn("BucketItem model not found in the current Amplify configuration. Please run 'npx ampx sandbox' to sync your backend.");
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const sub = bucketModel.observeQuery().subscribe({
-        next: ({ items }: { items: BucketItem[] }) => {
-          const sortedItems = [...items].sort((a, b) => {
-            const dateA = new Date(a.createdAt || 0).getTime();
-            const dateB = new Date(b.createdAt || 0).getTime();
-            return dateB - dateA;
-          });
-          setItems(sortedItems);
-          setIsLoading(false);
-        },
-        error: (error: any) => {
-          console.error('Error fetching bucket items:', error);
-          setIsLoading(false);
-        },
+  // Fetch items using TanStack Query
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["bucketItems"],
+    queryFn: async () => {
+      const { data: bucketItems } = await client.models.BucketItem.list();
+      return (bucketItems || []).sort((a: BucketItem, b: BucketItem) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
       });
+    },
+  });
 
-      return () => sub.unsubscribe();
-    } catch (e) {
-      console.error("Failed to initialize BucketItem subscription:", e);
-      setIsLoading(false);
-    }
-  }, []);
-
-  const addItem = async () => {
-    if (newItem.trim()) {
-      const bucketModel = (client.models as any)?.BucketItem;
-      if (!bucketModel) {
-        console.error("Cannot add item: BucketItem model not found.");
-        return;
-      }
-      const text = newItem.trim();
-      const tempId = `temp-${Date.now()}`;
+  // Create Mutation
+  const createMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const { data: newItem } = await client.models.BucketItem.create({
+        text,
+        completed: false,
+        createdAt: new Date().toISOString(),
+      });
+      return newItem;
+    },
+    onMutate: async (text) => {
+      queryClient.cancelQueries({ queryKey: ["bucketItems"] });
+      const previousItems = queryClient.getQueryData<BucketItem[]>(["bucketItems"]);
       
-      // Optimistic update
-      const optimisticItem: BucketItem = {
-        id: tempId,
+      const optimisticItem = {
+        id: `temp-${Date.now()}`,
         text,
         completed: false,
         createdAt: new Date().toISOString(),
       } as BucketItem;
+
+      if (previousItems) {
+        queryClient.setQueryData(["bucketItems"], [optimisticItem, ...previousItems]);
+      }
       
-      setItems(prev => [optimisticItem, ...prev]);
+      return { previousItems };
+    },
+    onError: (err, text, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(["bucketItems"], context.previousItems);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["bucketItems"] });
+    },
+  });
+
+  // Update Mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<BucketItem> & { id: string }) => {
+      const { data: updatedItem } = await client.models.BucketItem.update({
+        id,
+        ...updates,
+      });
+      return updatedItem;
+    },
+    onMutate: async (updatedItem) => {
+      queryClient.cancelQueries({ queryKey: ["bucketItems"] });
+      const previousItems = queryClient.getQueryData<BucketItem[]>(["bucketItems"]);
+      
+      if (previousItems) {
+        queryClient.setQueryData(
+          ["bucketItems"],
+          previousItems.map((item) =>
+            item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+          )
+        );
+      }
+      
+      return { previousItems };
+    },
+    onError: (err, updatedItem, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(["bucketItems"], context.previousItems);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["bucketItems"] });
+    },
+  });
+
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await client.models.BucketItem.delete({ id });
+    },
+    onMutate: async (id) => {
+      queryClient.cancelQueries({ queryKey: ["bucketItems"] });
+      const previousItems = queryClient.getQueryData<BucketItem[]>(["bucketItems"]);
+      
+      if (previousItems) {
+        queryClient.setQueryData(
+          ["bucketItems"],
+          previousItems.filter((item) => item.id !== id)
+        );
+      }
+      
+      return { previousItems };
+    },
+    onError: (err, id, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(["bucketItems"], context.previousItems);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["bucketItems"] });
+    },
+  });
+
+  const addItem = async () => {
+    if (newItem.trim()) {
+      createMutation.mutate(newItem.trim());
       setNewItem('');
       setIsAdding(false);
-      
-      try {
-        await bucketModel.create({
-          text,
-          completed: false,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (error) {
-        console.error('Failed to add item', error);
-        // Revert on error
-        setItems(prev => prev.filter(item => item.id !== tempId));
-      }
     }
   };
 
-  const toggleComplete = async (item: BucketItem) => {
-    const bucketModel = (client.models as any)?.BucketItem;
-    if (!bucketModel) return;
-
-    // Optimistic update
-    setItems(prev => prev.map(i => 
-      i.id === item.id ? { ...i, completed: !i.completed } : i
-    ));
-
-    try {
-      await bucketModel.update({
-        id: item.id,
-        completed: !item.completed,
-      });
-    } catch (error) {
-      console.error('Failed to toggle item', error);
-      // Revert on error
-      setItems(prev => prev.map(i => 
-        i.id === item.id ? { ...i, completed: item.completed } : i
-      ));
-    }
+  const toggleComplete = (item: BucketItem) => {
+    updateMutation.mutate({
+      id: item.id,
+      completed: !item.completed,
+    });
   };
 
-  const deleteItem = async (id: string) => {
-    const bucketModel = (client.models as any)?.BucketItem;
-    if (!bucketModel) return;
-
-    // Save previous state for revert
-    const previousItems = [...items];
-
-    // Optimistic update
-    setItems(prev => prev.filter(item => item.id !== id));
-
-    try {
-      await bucketModel.delete({ id });
-    } catch (error) {
-      console.error('Failed to delete item', error);
-      // Revert on error
-      setItems(previousItems);
-    }
+  const deleteItem = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const handleEdit = (item: BucketItem) => {
@@ -168,37 +185,18 @@ export default function BucketList() {
     setEditText(item.text || '');
   };
 
-  const saveEdit = async () => {
+  const saveEdit = () => {
     if (!editingItem || !editText.trim()) return;
-
-    const bucketModel = (client.models as any)?.BucketItem;
-    if (!bucketModel) return;
-
-    const updatedText = editText.trim();
-    const originalItem = { ...editingItem };
-
-    // Optimistic update
-    setItems(prev => prev.map(i => 
-      i.id === editingItem.id ? { ...i, text: updatedText } : i
-    ));
+    
+    updateMutation.mutate({
+      id: editingItem.id,
+      text: editText.trim(),
+    });
     setEditingItem(null);
-
-    try {
-      await bucketModel.update({
-        id: originalItem.id,
-        text: updatedText,
-      });
-    } catch (error) {
-      console.error('Failed to update item', error);
-      // Revert on error
-      setItems(prev => prev.map(i => 
-        i.id === originalItem.id ? originalItem : i
-      ));
-    }
   };
 
 
-  const completedCount = items.filter(item => item.completed).length;
+  const completedCount = items.filter((item: BucketItem) => item.completed).length;
   const totalCount = items.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
@@ -207,15 +205,36 @@ export default function BucketList() {
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05
+        staggerChildren: 0.03 // Faster stagger
       }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0 },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } }
+    hidden: { opacity: 0, scale: 0.98, y: 5 },
+    show: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 500,
+        damping: 30,
+        mass: 0.8
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      scale: 0.95, 
+      transition: { duration: 0.15 } 
+    }
+  };
+
+  const layoutTransition = {
+    type: "spring",
+    stiffness: 500,
+    damping: 30,
+    mass: 0.8
   };
 
   return (
@@ -318,14 +337,13 @@ export default function BucketList() {
           </AnimatePresence>
 
           {/* Bucket List Items */}
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar relative"
-          >
+          <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar relative">
             {isLoading && (
-              <div className="space-y-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 border-gray-100 bg-white shadow-sm">
                     <Skeleton className="h-7 w-7 rounded-full bg-gray-100" />
@@ -333,34 +351,38 @@ export default function BucketList() {
                     <Skeleton className="h-9 w-9 rounded-xl bg-gray-100" />
                   </div>
                 ))}
-              </div>
+              </motion.div>
             )}
-            <AnimatePresence initial={false} mode='popLayout'>
-              {items.length === 0 && !isLoading ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center py-16 text-gray-400"
-                >
-                  <i className="fas fa-heart text-7xl mb-6 text-pink-100"></i>
-                  <p className="text-xl font-medium text-gray-400">Start adding your dreams for 2026!</p>
-                </motion.div>
-              ) : (
-                items.map((item) => (
+            
+            <div className="space-y-4">
+              <AnimatePresence initial={false} mode="popLayout">
+                {items.length === 0 && !isLoading ? (
                   <motion.div
-                    layout
-                    key={item.id}
-                    variants={itemVariants}
-                    initial="hidden"
-                    animate="show"
-                    exit="exit"
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                    className={`group flex flex-col md:flex-row md:items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 transition-all duration-300 ${
-                      item.completed
-                        ? 'bg-green-50/50 border-green-100 shadow-sm'
-                        : 'bg-white border-gray-100 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/5'
-                    }`}
+                    key="empty-state"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-16 text-gray-400"
                   >
+                    <i className="fas fa-heart text-7xl mb-6 text-pink-100"></i>
+                    <p className="text-xl font-medium text-gray-400">Start adding your dreams for 2026!</p>
+                  </motion.div>
+                ) : (
+                  items.map((item: BucketItem) => (
+                    <motion.div
+                      layout
+                      transition={layoutTransition}
+                      key={item.id}
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="show"
+                      exit="exit"
+                      className={`group flex flex-col md:flex-row md:items-center gap-4 p-4 sm:p-5 rounded-2xl border-2 ${
+                        item.completed
+                          ? 'bg-green-50/50 border-green-100 shadow-sm'
+                          : 'bg-white border-gray-100 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/5'
+                      }`}
+                    >
                     {editingItem?.id === item.id ? (
                       <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full animate-in fade-in slide-in-from-left-2 duration-300 p-1">
                         <Input
@@ -470,8 +492,9 @@ export default function BucketList() {
                   </motion.div>
                 ))
               )}
-            </AnimatePresence>
-          </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
 
           {/* Footer Message */}
 

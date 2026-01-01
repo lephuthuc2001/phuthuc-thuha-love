@@ -8,53 +8,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import AddMemoryForm from './AddMemoryForm';
-
-const client = generateClient<Schema>();
-
-type MemoryWithUrls = Schema['Memory']['type'] & { imageUrls?: string[] };
+import { useMemories, type MemoryWithUrls } from '@/app/hooks/useMemories';
 
 export default function MemoryTimeline() {
-  const [memories, setMemories] = useState<MemoryWithUrls[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { memories, isLoading } = useMemories();
   const [editingMemory, setEditingMemory] = useState<MemoryWithUrls | null>(null);
-
-  useEffect(() => {
-    const sub = client.models.Memory.observeQuery().subscribe({
-      next: async ({ items }) => {
-        // Sort by date descending (newest first)
-        const sortedItems = items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
-        // Fetch image URLs for each memory
-        const itemsWithUrls = await Promise.all(
-          sortedItems.map(async (item) => {
-            if (item.images && item.images.length > 0) {
-              const urls = await Promise.all(
-                item.images.map(async (path) => {
-                  try {
-                    const result = await getUrl({ path: path as string });
-                    return result.url.toString();
-                  } catch (e) {
-                    return null;
-                  }
-                })
-              );
-              return { ...item, imageUrls: urls.filter(Boolean) as string[] };
-            }
-            return { ...item, imageUrls: [] };
-          })
-        );
-
-        setMemories(itemsWithUrls);
-        setIsLoading(false);
-      },
-      error: (error) => {
-        console.error("Error observing memories:", error);
-        setIsLoading(false);
-      }
-    });
-
-    return () => sub.unsubscribe();
-  }, []);
 
   // Helper to group memories
   const groupedMemories = memories.reduce((acc, memory) => {
@@ -118,7 +76,7 @@ export default function MemoryTimeline() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         onClick={(e) => toggleExpand(memory.id, e)}
-                        className={`group cursor-pointer bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-2 ${
+                        className={`group cursor-pointer bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg hover:shadow-xl border-2 ${
                           expandedId === memory.id ? 'border-pink-400 shadow-pink-500/20' : 'border-white/50'
                         }`}
                       >
@@ -184,7 +142,7 @@ export default function MemoryTimeline() {
                         </div>
 
                         {/* Expanded Content */}
-                        <AnimatePresence>
+                        <AnimatePresence initial={false}>
                           {expandedId === memory.id && (
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
