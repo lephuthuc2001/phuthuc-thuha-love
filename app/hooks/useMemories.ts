@@ -7,7 +7,11 @@ import { type Schema } from '@/amplify/data/resource';
 
 const client = generateClient<Schema>();
 
-export type MemoryWithUrls = Schema['Memory']['type'] & { imageUrls?: string[]; attachments?: Schema['MemoryAttachment']['type'][] };
+export type MemoryWithMedia = Omit<Schema['Memory']['type'], 'attachments'> & { 
+  imageUrls?: string[]; 
+  attachments?: Schema['MemoryAttachment']['type'][];
+  media?: { url: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO'; id: string }[];
+};
 
 export function useMemories() {
   const queryClient = useQueryClient();
@@ -25,25 +29,30 @@ export function useMemories() {
             filter: { memoryId: { eq: item.id } }
           });
           
-          let urls: string[] = [];
+          let mediaItems: { url: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO'; id: string }[] = [];
           
           if (attachments && attachments.length > 0) {
-            urls = await Promise.all(
+            mediaItems = await Promise.all(
               attachments.map(async (att) => {
                 try {
                   const result = await getUrl({ path: att.path });
-                  return result.url.toString();
+                  return {
+                    url: result.url.toString(),
+                    type: att.type as 'IMAGE' | 'VIDEO' | 'AUDIO' || 'IMAGE',
+                    id: att.id
+                  };
                 } catch (e) {
-                  return '';
+                  return null;
                 }
               })
-            );
+            ).then(items => items.filter((item): item is NonNullable<typeof item> => item !== null));
           }
           
           return { 
             ...item, 
             attachments: attachments || [], 
-            imageUrls: urls.filter(Boolean) as string[] 
+            imageUrls: mediaItems.filter(m => m.type === 'IMAGE').map(m => m.url),
+            media: mediaItems
           };
         })
       );
@@ -62,7 +71,8 @@ export function useMemories() {
       title: string;
       date: string;
       description?: string;
-      images?: string[];
+      attachments?: { path: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO' }[];
+      images?: string[]; // Legacy support
       cost?: number;
       location?: string;
     }) => {
@@ -75,14 +85,20 @@ export function useMemories() {
         location: input.location,
       });
 
+      if (!newMemory) throw new Error("Failed to create memory");
+
+
       // 2. Create Attachments
-      if (input.images && input.images.length > 0) {
+      const attachmentsToCreate = input.attachments || 
+        (input.images ? input.images.map(path => ({ path, type: 'IMAGE' as const })) : []);
+
+      if (attachmentsToCreate.length > 0) {
         await Promise.all(
-          input.images.map(path => 
+          attachmentsToCreate.map(att => 
             client.models.MemoryAttachment.create({
               memoryId: newMemory.id,
-              path,
-              type: 'IMAGE'
+              path: att.path,
+              type: att.type
             })
           )
         );
@@ -102,7 +118,8 @@ export function useMemories() {
       title?: string;
       date?: string;
       description?: string;
-      images?: string[];
+      attachments?: { path: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO' }[];
+      images?: string[]; // Legacy
       cost?: number;
       location?: string;
     }) => {
@@ -116,28 +133,34 @@ export function useMemories() {
         location: input.location,
       });
 
+      if (!updatedMemory) throw new Error("Failed to update memory");
+
+
       // 2. Sync Attachments
-      if (input.images) {
+      const newAttachments = input.attachments || 
+        (input.images ? input.images.map(path => ({ path, type: 'IMAGE' as const })) : null);
+
+      if (newAttachments) {
         // Fetch existing
         const { data: existingAttachments } = await client.models.MemoryAttachment.list({
           filter: { memoryId: { eq: input.id } }
         });
 
-        const newPaths = input.images;
+        const newPaths = newAttachments.map(a => a.path);
         const currentPaths = existingAttachments.map(a => a.path);
 
         // Determine Additions
-        const toAdd = newPaths.filter(p => !currentPaths.includes(p));
+        const toAdd = newAttachments.filter(a => !currentPaths.includes(a.path));
         
         // Determine Deletions
         const toDelete = existingAttachments.filter(a => !newPaths.includes(a.path));
 
         await Promise.all([
-          ...toAdd.map(path => 
+          ...toAdd.map(att => 
             client.models.MemoryAttachment.create({
               memoryId: input.id,
-              path,
-              type: 'IMAGE'
+              path: att.path,
+              type: att.type
             })
           ),
           ...toDelete.map(att => 

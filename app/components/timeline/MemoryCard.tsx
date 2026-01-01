@@ -1,13 +1,13 @@
-import { MemoryWithUrls } from "@/app/hooks/useMemories";
+import { MemoryWithMedia } from "@/app/hooks/useMemories";
 import { AnimatePresence, motion } from "motion/react";
 
 interface MemoryCardProps {
-  memory: MemoryWithUrls;
+  memory: MemoryWithMedia;
   idx: number; // This is the timeline index
   isExpanded: boolean;
   onToggle: (e: React.MouseEvent) => void;
   onImageClick: (index: number) => void; // Changed to receive index of the image
-  onEdit: (memory: MemoryWithUrls) => void;
+  onEdit: (memory: MemoryWithMedia) => void;
 }
 
 export function MemoryCard({

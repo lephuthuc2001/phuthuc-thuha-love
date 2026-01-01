@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import { getUrl } from 'aws-amplify/storage';
-import { type Schema } from '@/amplify/data/resource';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState } from 'react';
+import { motion } from 'motion/react';
 import { MemoryCard } from './timeline/MemoryCard';
 import { MemoryLightbox } from './timeline/MemoryLightbox';
 import { useMemories } from '@/app/hooks/useMemories';
+import type { MemoryWithMedia } from '@/app/hooks/useMemories';
 import { useMilestones } from '@/app/hooks/useMilestones';
 import { Skeleton } from "@/components/ui/skeleton"
 import AddMemoryForm from "./AddMemoryForm"
@@ -16,8 +14,9 @@ import { MigrationTool } from "./MigrationTool";
 export default function MemoryTimeline() {
   const { memories, isLoading } = useMemories();
   const { nextMilestone, milestones } = useMilestones();
-  const [editingMemory, setEditingMemory] = useState<MemoryWithUrls | null>(null);
-  const [lightboxData, setLightboxData] = useState<{ images: string[]; index: number } | null>(null);
+  const [editingMemory, setEditingMemory] = useState<MemoryWithMedia | null>(null);
+  const [lightboxData, setLightboxData] = useState<{ media: { url: string; type: string }[]; index: number } | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Helper to group memories
   const groupedMemories = memories.reduce((acc, memory) => {
@@ -32,9 +31,7 @@ export default function MemoryTimeline() {
     
     acc[year][month][day].push(memory);
     return acc;
-  }, {} as Record<string, Record<string, Record<string, MemoryWithUrls[]>>>);
-
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  }, {} as Record<string, Record<string, Record<string, MemoryWithMedia[]>>>);
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,7 +46,7 @@ export default function MemoryTimeline() {
   };
 
   // Helper to calculate total cost for a day
-  const getDayTotalCost = (memories: MemoryWithUrls[]) => {
+  const getDayTotalCost = (memories: MemoryWithMedia[]) => {
     return memories.reduce((total, m) => total + (m.cost || 0), 0);
   };
 
@@ -158,12 +155,14 @@ export default function MemoryTimeline() {
                                 idx={idx}
                                 isExpanded={expandedId === memory.id}
                                 onToggle={(e) => toggleExpand(memory.id, e)}
-                                onImageClick={(index) => setLightboxData({ images: memory.imageUrls || [], index })}
+                                onImageClick={(index) => setLightboxData({ 
+                                    media: memory.media || (memory.imageUrls || []).map(url => ({ url, type: 'IMAGE' })), 
+                                    index 
+                                })}
                                 onEdit={(mem) => {
                                   setEditingMemory(mem);
                                 }}
                               />
-
                             ))}
                           </div>
                         </div>
@@ -208,9 +207,9 @@ export default function MemoryTimeline() {
         initialData={editingMemory}
       />
 
-      {/* Image Lightbox */}
+      {/* Media Lightbox */}
       <MemoryLightbox 
-        images={lightboxData?.images || []}
+        media={lightboxData?.media || []}
         initialIndex={lightboxData?.index || 0}
         isOpen={!!lightboxData}
         onClose={() => setLightboxData(null)} 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { uploadData } from 'aws-amplify/storage';
 import { type Schema } from '@/amplify/data/resource';
-import { useMemories } from '@/app/hooks/useMemories';
+import { useMemories, type MemoryWithMedia } from '@/app/hooks/useMemories';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -44,12 +44,12 @@ type MemoryFormValues = z.infer<typeof memorySchema>;
 interface AddMemoryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: any; 
+  initialData?: MemoryWithMedia | null; 
 }
 
 export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMemoryFormProps) {
   const [newFiles, setNewFiles] = useState<{ id: string; file: File; preview: string }[]>([]);
-  const [existingImages, setExistingImages] = useState<{ id: string; path: string; url: string }[]>([]);
+  const [existingImages, setExistingImages] = useState<{ id: string; path: string; url: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO' }[]>([]);
 
   const [displayCost, setDisplayCost] = useState('');
 
@@ -68,10 +68,10 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     if (open) {
       reset(initialData ? {
         title: initialData.title,
-        description: initialData.description,
+        description: initialData.description ?? '',
         date: initialData.date,
-        cost: initialData.cost,
-        location: initialData.location,
+        cost: initialData.cost ?? 0,
+        location: initialData.location ?? '',
       } : {
         title: '',
         date: '',
@@ -85,7 +85,8 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         setExistingImages(initialData.attachments.map((att: any, i: number) => ({
           id: att.id,
           path: att.path,
-          url: initialData.imageUrls?.[i] || ''
+          url: initialData.imageUrls?.[i] || initialData.media?.find((m:any) => m.id === att.id)?.url || '',
+          type: att.type || 'IMAGE'
         })));
       } else {
         setExistingImages([]);
@@ -94,9 +95,6 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
       newFiles.forEach(item => URL.revokeObjectURL(item.preview));
       setNewFiles([]);
 
-
-      
-      // Initialize display cost
       if (initialData?.cost) {
         setDisplayCost(new Intl.NumberFormat('vi-VN').format(initialData.cost));
       } else {
@@ -146,7 +144,6 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     setExistingImages(prev => prev.filter(item => item.id !== id));
   };
 
-
   const { createMemory, updateMemory, deleteMemory, isSubmitting: isHookSubmitting } = useMemories();
   const [internalSubmitting, setInternalSubmitting] = useState(false);
   const isSubmitting = internalSubmitting || isHookSubmitting;
@@ -155,17 +152,28 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
     setInternalSubmitting(true);
 
     try {
-      let imagePaths: string[] = existingImages.map(img => img.path);
+      // 1. Prepare attachments list
+      const attachments: { path: string; type: 'IMAGE' | 'VIDEO' | 'AUDIO' }[] = [];
 
+      // Add existing attachments
+      existingImages.forEach(img => {
+        attachments.push({ path: img.path, type: img.type });
+      });
+
+      // Upload and add new files
       for (const item of newFiles) {
         const path = `media/memories/${Date.now()}-${item.file.name}`;
         await uploadData({
           path,
           data: item.file,
         }).result;
-        imagePaths.push(path);
-      }
+        
+        let type: 'IMAGE' | 'VIDEO' | 'AUDIO' = 'IMAGE';
+        if (item.file.type.startsWith('video/')) type = 'VIDEO';
+        if (item.file.type.startsWith('audio/')) type = 'AUDIO';
 
+        attachments.push({ path, type });
+      }
 
       const input = {
         title: data.title,
@@ -173,7 +181,9 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
         date: data.date,
         cost: data.cost || 0,
         location: data.location || '',
-        images: imagePaths,
+        attachments: attachments,
+        // Legacy images field populated with just images for now, or just empty
+        images: attachments.filter(a => a.type === 'IMAGE').map(a => a.path), 
       };
 
       if (initialData) {
@@ -281,22 +291,31 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
           <div className="space-y-2">
             <Label className="text-white/80">Photos</Label>
             
+
             {/* Recent/Existing Files Grid */}
             {(existingImages.length > 0 || newFiles.length > 0) && (
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {existingImages.map((img) => {
+                   const isVideo = img.path.toLowerCase().endsWith('.mp4') || img.path.toLowerCase().endsWith('.mov'); // Simple heuristic if type missing
+                   // Better: use the type from initialData if available. For now let's rely on extension or assuming image for legacy
+                   
                    return (
-                    <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
-                      <div className="w-full h-full bg-white/5 flex items-center justify-center text-xs text-white/50">
-                         <i className="fas fa-image text-2xl"></i>
+                    <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10 bg-black/40">
+                      <div className="w-full h-full flex items-center justify-center text-xs text-white/50">
+                         {isVideo ? <i className="fas fa-video text-2xl"></i> : <i className="fas fa-image text-2xl"></i>}
                       </div> 
-                      {img.url && (
+                      {img.url && !isVideo && (
                         <img src={img.url} alt="existing" className="absolute inset-0 w-full h-full object-cover" />
+                      )}
+                      {isVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <i className="fas fa-play-circle text-3xl text-white/80"></i>
+                        </div>
                       )}
                       <button 
                         type="button"
                         onClick={() => removeExisting(img.id)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       >
                         <i className="fas fa-times"></i>
                       </button>
@@ -304,18 +323,35 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
                    )
                 })}
  
-                {newFiles.map((item) => (
-                  <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
-                    <img src={item.preview} alt="preview" className="w-full h-full object-cover" />
-                    <button 
-                      type="button"
-                      onClick={() => removeFile(item.id)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <i className="fas fa-times"></i>
-                    </button>
-                  </div>
-                ))}
+                {newFiles.map((item) => {
+                  const isImage = item.file.type.startsWith('image/');
+                  const isVideo = item.file.type.startsWith('video/');
+                  const isAudio = item.file.type.startsWith('audio/');
+
+                  return (
+                    <div key={item.id} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10 bg-black/40">
+                      {isImage && <img src={item.preview} alt="preview" className="w-full h-full object-cover" />}
+                      {isVideo && (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                           <i className="fas fa-video text-3xl text-pink-400"></i>
+                        </div>
+                      )}
+                      {isAudio && (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                           <i className="fas fa-music text-3xl text-pink-400"></i>
+                        </div>
+                      )}
+                      
+                      <button 
+                        type="button"
+                        onClick={() => removeFile(item.id)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -324,14 +360,14 @@ export default function AddMemoryForm({ open, onOpenChange, initialData }: AddMe
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <i className="fas fa-cloud-upload-alt text-2xl text-pink-300 mb-2"></i>
                 <p className="text-sm text-white/70">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
+                  <span className="font-semibold">Click to upload</span> media
                 </p>
-                <p className="text-xs text-white/50">{newFiles.length} new files selected</p>
+                <p className="text-xs text-white/50">Images, Videos, or Audio</p>
               </div>
               <input 
                 type="file" 
                 multiple 
-                accept="image/*"
+                accept="image/*,video/*,audio/*"
                 className="hidden" 
                 onChange={handleFileChange}
               />
