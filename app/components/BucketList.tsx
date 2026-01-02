@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { motion, AnimatePresence, Reorder } from "motion/react";
+import { motion, AnimatePresence, Reorder, useDragControls } from "motion/react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import { Progress } from "@/components/ui/progress"
@@ -20,6 +20,37 @@ let client: any = null;
 const MotionButton = motion(Button);
 
 type BucketItem = Schema["BucketItem"]["type"];
+
+interface ReorderableItemProps {
+  item: BucketItem;
+  toggleComplete: (item: BucketItem) => void;
+  handleEdit: (item: BucketItem) => void;
+  deleteItem: (id: string) => void;
+  editingItem: BucketItem | null;
+  editText: string;
+  setEditText: (text: string) => void;
+  saveEdit: () => void;
+  setEditingItem: (item: BucketItem | null) => void;
+}
+
+const ReorderableItem = ({ item, ...props }: ReorderableItemProps) => {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      value={item}
+      dragListener={false}
+      dragControls={controls}
+      className="relative"
+    >
+      <BucketListItem 
+        item={item} 
+        dragControls={controls} 
+        isDraggable={true}
+        {...props} 
+      />
+    </Reorder.Item>
+  );
+};
 
 export default function BucketList() {
   const queryClient = useQueryClient();
@@ -414,24 +445,18 @@ export default function BucketList() {
                   </motion.div>
                 ) : (
                   activeItems.map((item: BucketItem) => (
-                    <Reorder.Item 
+                    <ReorderableItem 
                         key={item.id} 
-                        value={item}
-                        className="touch-none" // prevent scroll interference on mobile drag
-                    >
-                        <BucketListItem 
-                          item={item} 
-                          toggleComplete={toggleComplete} 
-                          handleEdit={handleEdit} 
-                          deleteItem={deleteItem}
-                          editingItem={editingItem}
-                          editText={editText}
-                          setEditText={setEditText}
-                          saveEdit={saveEdit}
-                          setEditingItem={setEditingItem}
-                          isDraggable={true}
-                        />
-                    </Reorder.Item>
+                        item={item}
+                        toggleComplete={toggleComplete} 
+                        handleEdit={handleEdit} 
+                        deleteItem={deleteItem}
+                        editingItem={editingItem}
+                        editText={editText}
+                        setEditText={setEditText}
+                        saveEdit={saveEdit}
+                        setEditingItem={setEditingItem}
+                    />
                   ))
                 )}
                </Reorder.Group>

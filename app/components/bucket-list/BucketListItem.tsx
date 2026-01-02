@@ -29,6 +29,7 @@ interface BucketListItemProps {
   saveEdit: () => void;
   setEditingItem: (item: BucketItem | null) => void;
   isDraggable?: boolean;
+  dragControls?: any;
 }
 
 export function BucketListItem({
@@ -42,6 +43,7 @@ export function BucketListItem({
   saveEdit,
   setEditingItem,
   isDraggable,
+  dragControls,
 }: BucketListItemProps) {
   return (
     <div
@@ -49,7 +51,7 @@ export function BucketListItem({
         item.completed
           ? "bg-green-50/50 border-green-100 shadow-sm"
           : "bg-white border-gray-100 hover:border-pink-200 hover:shadow-xl hover:shadow-pink-500/5"
-      } ${isDraggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+      }`}
     >
       {editingItem?.id === item.id ? (
         <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full animate-in fade-in slide-in-from-left-2 duration-300 p-1">
@@ -85,8 +87,11 @@ export function BucketListItem({
       ) : (
         <>
           <div className="flex items-start gap-4 flex-1 min-w-0">
-            {isDraggable && (
-              <div className="pt-2 text-gray-300 cursor-grab active:cursor-grabbing">
+            {isDraggable && dragControls && (
+              <div 
+                className="pt-2 text-gray-300 cursor-grab active:cursor-grabbing touch-none px-1"
+                onPointerDown={(e) => dragControls.start(e)}
+              >
                 <i className="fas fa-grip-vertical"></i>
               </div>
             )}
