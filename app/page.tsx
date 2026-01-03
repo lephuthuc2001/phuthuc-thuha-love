@@ -62,7 +62,7 @@ export default function LoveStory() {
 
   return (
     <div className="text-white min-h-screen relative z-10 flex flex-col items-center justify-center p-4">
-      <Authenticator hideSignUp={true} components={components}>
+      <Authenticator hideSignUp={true} components={components} loginMechanisms={['email']}>
         {({ signOut, user }) => (
           <div className="w-full h-full">
             <MainPage 
